@@ -1,5 +1,5 @@
 {
-  "model_type": "Physics-informed Linear Regression + SHAP Explainer",
+  "model_type": "Physics-informed Linear Regression + exact additive SHAP contributions",
   "training_method": "Linear regression over electricity, thermal, and production features",
   "evaluation_method": "Chronological 70/10/20 fit/calibration/test split; four-fold expanding-window CV on fit rows",
   "train_r2": 0.9986705918967359,
@@ -7,7 +7,7 @@
   "train_rmse": 19.66648712290076,
   "test_rmse": 20.223562325072194,
   "test_mae": 15.994323413314763,
-  "prediction_interval_method": "95th-percentile absolute-residual range calibrated on the preceding chronological 10% window; temporal coverage is not guaranteed",
+  "prediction_interval_method": "95% empirical residual interval calibrated on the preceding chronological 10% window; lower bound truncated at zero; future coverage is not guaranteed",
   "prediction_interval_nominal_coverage": 0.95,
   "prediction_interval_holdout_coverage": 0.9513888888888888,
   "prediction_interval_abs_error_q95": 38.77630837743027,
@@ -18,13 +18,54 @@
   "model_training_rows": 1512,
   "calibration_rows": 216,
   "test_rows": 432,
-  "input_feature_count": 12,
+  "input_feature_count": 5,
   "calibration_start_timestamp": "2026-03-05 00:00:00",
   "test_start_timestamp": "2026-03-14 00:00:00",
   "model_version": "EcoSense-PIR-1.0.0",
   "feature_schema_version": "1.0.0",
   "training_data_sha256": "fe3759679f48f91be2ac816a84d46e8428a9232a8b34f74ef9a05160ebd01a74",
-  "trained_at_utc": "2026-10-05T13:32:27.242054+00:00",
+  "trained_at_utc": "2026-10-05T20:57:45.379869+00:00",
+  "model_environment": {
+    "python": "3.12.10",
+    "numpy": "2.5.1",
+    "pandas": "3.0.3",
+    "scikit_learn": "1.9.0",
+    "scipy": "1.16.3",
+    "joblib": "1.5.3",
+    "model_artifact": "ecosense_xgb.joblib",
+    "model_version": "EcoSense-PIR-1.0.0",
+    "environment_recorded_at_utc": "2026-10-05T20:57:45.376080+00:00"
+  },
+  "global_feature_importance": [
+    {
+      "feature": "electricity_emissions_proxy",
+      "friendly_name": "Electricity Emissions (kg CO\u2082/hr)",
+      "mean_absolute_contribution_kg_co2_per_hour": 432.4491954860538,
+      "relative_share_percent": 89.49857243306086,
+      "method": "Mean absolute additive linear-model contribution over the fit window; not causal importance."
+    },
+    {
+      "feature": "production_volume_tons",
+      "friendly_name": "Production Output (Tons/hr)",
+      "mean_absolute_contribution_kg_co2_per_hour": 21.964242973292375,
+      "relative_share_percent": 4.545663192813017,
+      "method": "Mean absolute additive linear-model contribution over the fit window; not causal importance."
+    },
+    {
+      "feature": "furnace_temp_c",
+      "friendly_name": "Furnace Temperature (\u00b0C)",
+      "mean_absolute_contribution_kg_co2_per_hour": 14.649214342440386,
+      "relative_share_percent": 3.0317636952491838,
+      "method": "Mean absolute additive linear-model contribution over the fit window; not causal importance."
+    },
+    {
+      "feature": "boiler_pressure_bar",
+      "friendly_name": "Boiler Pressure (Bar)",
+      "mean_absolute_contribution_kg_co2_per_hour": 14.12851296736334,
+      "relative_share_percent": 2.9240006788769395,
+      "method": "Mean absolute additive linear-model contribution over the fit window; not causal importance."
+    }
+  ],
   "feature_cols": [
     "electricity_emissions_proxy",
     "furnace_temp_c",
@@ -57,18 +98,24 @@
     "boiler_pressure_bar": {
       "min": 21.96484625214082,
       "max": 32.0
+    }
+  },
+  "model_feature_ranges": {
+    "electricity_emissions_proxy": {
+      "min": 769.8023159414723,
+      "max": 2926.2673388305357
     },
-    "energy_lag1": {
-      "min": 1722.9172261627775,
-      "max": 4061.931115020154
+    "furnace_temp_c": {
+      "min": 974.9615465227978,
+      "max": 1242.0398036389124
     },
-    "production_lag1": {
+    "boiler_pressure_bar": {
+      "min": 21.96484625214082,
+      "max": 32.0
+    },
+    "production_volume_tons": {
       "min": 18.38373305046168,
       "max": 60.32183048858054
-    },
-    "rolling_avg_energy_3h": {
-      "min": 1944.753249163845,
-      "max": 3857.80206924678
     }
   }
 }

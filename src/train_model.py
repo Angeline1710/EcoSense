@@ -1,41 +1,22 @@
 import os
 import json
 import hashlib
+import platform
 import joblib
 import numpy as np
 import pandas as pd
+import scipy
+import sklearn
 from datetime import datetime, timezone
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import TimeSeriesSplit
 
 from src.data_generator import generate_industrial_dataset
+from src.validation import REQUIRED_INPUTS
 
-INPUT_FEATURE_COLS = [
-    "energy_kwh",
-    "grid_emission_factor",
-    "production_volume_tons",
-    "furnace_temp_c",
-    "boiler_pressure_bar",
-    "shift",
-    "hour",
-    "day_of_week",
-    "is_weekend",
-    "energy_lag1",
-    "production_lag1",
-    "rolling_avg_energy_3h"
-]
-
-RANGE_CHECK_INPUTS = [
-    "energy_kwh",
-    "grid_emission_factor",
-    "production_volume_tons",
-    "furnace_temp_c",
-    "boiler_pressure_bar",
-    "energy_lag1",
-    "production_lag1",
-    "rolling_avg_energy_3h",
-]
+INPUT_FEATURE_COLS = list(REQUIRED_INPUTS)
+RANGE_CHECK_INPUTS = list(REQUIRED_INPUTS)
 
 FEATURE_COLS = [
     "electricity_emissions_proxy",
@@ -103,7 +84,9 @@ def train_and_evaluate(data_path: str = "data/industrial_emissions.csv", models_
     calibration_errors = np.abs(y_calibration.to_numpy() - calibration_predictions)
     interval_rank = min(len(calibration_errors), int(np.ceil((len(calibration_errors) + 1) * 0.95)))
     interval_error_q95 = float(np.sort(calibration_errors)[interval_rank - 1])
-    test_interval_coverage = float(np.mean(np.abs(y_test.to_numpy() - test_predictions) <= interval_error_q95))
+    test_lower = np.maximum(0.0, test_predictions - interval_error_q95)
+    test_upper = test_predictions + interval_error_q95
+    test_interval_coverage = float(np.mean((y_test.to_numpy() >= test_lower) & (y_test.to_numpy() <= test_upper)))
 
     # Keep the deployed estimator identical to the one used to create calibration residuals.
     model = evaluation_model
@@ -120,6 +103,34 @@ def train_and_evaluate(data_path: str = "data/industrial_emissions.csv", models_
     background = pd.DataFrame([X_train.mean()], columns=FEATURE_COLS)
     base_value = float(model.intercept_ + np.dot(model.coef_, background.iloc[0].to_numpy()))
     print(f"SHAP Baseline Value (training-feature mean): {base_value:.2f} kg CO2")
+    absolute_training_contributions = np.abs(
+        (X_train[FEATURE_COLS].to_numpy() - background.iloc[0].to_numpy()) * np.asarray(model.coef_)
+    )
+    mean_absolute_contributions = absolute_training_contributions.mean(axis=0)
+    total_mean_absolute_contribution = float(mean_absolute_contributions.sum())
+    global_feature_importance = [
+        {
+            "feature": col,
+            "friendly_name": FEATURE_NAMES_FRIENDLY[col],
+            "mean_absolute_contribution_kg_co2_per_hour": float(value),
+            "relative_share_percent": float(value / total_mean_absolute_contribution * 100.0) if total_mean_absolute_contribution else 0.0,
+            "method": "Mean absolute additive linear-model contribution over the fit window; not causal importance.",
+        }
+        for col, value in zip(FEATURE_COLS, mean_absolute_contributions)
+    ]
+    global_feature_importance.sort(key=lambda item: item["mean_absolute_contribution_kg_co2_per_hour"], reverse=True)
+
+    environment_manifest = {
+        "python": platform.python_version(),
+        "numpy": np.__version__,
+        "pandas": pd.__version__,
+        "scikit_learn": sklearn.__version__,
+        "scipy": scipy.__version__,
+        "joblib": joblib.__version__,
+        "model_artifact": "ecosense_xgb.joblib",
+        "model_version": "EcoSense-PIR-1.0.0",
+        "environment_recorded_at_utc": datetime.now(timezone.utc).isoformat(),
+    }
 
     elasticity_dict = {}
     for col, coef in zip(FEATURE_COLS, model.coef_):
@@ -141,7 +152,7 @@ def train_and_evaluate(data_path: str = "data/industrial_emissions.csv", models_
         training_data_sha256 = hashlib.sha256(data_file.read()).hexdigest()
 
     metrics = {
-        "model_type": "Physics-informed Linear Regression + SHAP Explainer",
+        "model_type": "Physics-informed Linear Regression + exact additive SHAP contributions",
         "training_method": "Linear regression over electricity, thermal, and production features",
         "evaluation_method": "Chronological 70/10/20 fit/calibration/test split; four-fold expanding-window CV on fit rows",
         "train_r2": float(train_r2),
@@ -149,7 +160,7 @@ def train_and_evaluate(data_path: str = "data/industrial_emissions.csv", models_
         "train_rmse": float(train_rmse),
         "test_rmse": float(test_rmse),
         "test_mae": float(test_mae),
-        "prediction_interval_method": "95th-percentile absolute-residual range calibrated on the preceding chronological 10% window; temporal coverage is not guaranteed",
+        "prediction_interval_method": "95% empirical residual interval calibrated on the preceding chronological 10% window; lower bound truncated at zero; future coverage is not guaranteed",
         "prediction_interval_nominal_coverage": 0.95,
         "prediction_interval_holdout_coverage": test_interval_coverage,
         "prediction_interval_abs_error_q95": interval_error_q95,
@@ -167,6 +178,8 @@ def train_and_evaluate(data_path: str = "data/industrial_emissions.csv", models_
         "feature_schema_version": "1.0.0",
         "training_data_sha256": training_data_sha256,
         "trained_at_utc": datetime.now(timezone.utc).isoformat(),
+        "model_environment": environment_manifest,
+        "global_feature_importance": global_feature_importance,
         "feature_cols": FEATURE_COLS,
         "feature_names_friendly": FEATURE_NAMES_FRIENDLY
     }
@@ -174,12 +187,19 @@ def train_and_evaluate(data_path: str = "data/industrial_emissions.csv", models_
         col: {"min": float(df.iloc[:calibration_start][col].min()), "max": float(df.iloc[:calibration_start][col].max())}
         for col in RANGE_CHECK_INPUTS
     }
+    metrics["model_feature_ranges"] = {
+        col: {"min": float(X_train[col].min()), "max": float(X_train[col].max())}
+        for col in FEATURE_COLS
+    }
     
     with open(os.path.join(models_dir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
         
     with open(os.path.join(models_dir, "elasticity.json"), "w") as f:
         json.dump(elasticity_dict, f, indent=2)
+
+    with open(os.path.join(models_dir, "model_environment.json"), "w") as f:
+        json.dump(environment_manifest, f, indent=2)
 
     print(f"[Train] Model artifacts successfully saved to '{models_dir}/'.")
     return model, metrics

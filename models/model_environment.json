@@ -1,0 +1,11 @@
+{
+  "python": "3.12.10",
+  "numpy": "2.5.1",
+  "pandas": "3.0.3",
+  "scikit_learn": "1.9.0",
+  "scipy": "1.16.3",
+  "joblib": "1.5.3",
+  "model_artifact": "ecosense_xgb.joblib",
+  "model_version": "EcoSense-PIR-1.0.0",
+  "environment_recorded_at_utc": "2026-10-05T20:57:45.376080+00:00"
+}

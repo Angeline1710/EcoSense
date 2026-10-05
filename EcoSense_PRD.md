@@ -1,5 +1,8 @@
-# Product Requirements Document (PRD)
-## EcoSense — AI-Powered Carbon Optimization Copilot for Smart Industries
+# Historical Product Proposal (Superseded)
+## EcoSense — Original MVP Scope
+
+> This document records the original proposal, not the shipped system. Its references to XGBoost, real-time forecasting, realistic/real-factory data, compliance risk, and planned components are not claims about the current implementation. The current system uses controlled synthetic data, a pinned linear regression model, current-state estimation, and an unverified synthetic activity reference. See `README.md`, `models/metrics.json`, and `models/model_environment.json` for implemented behavior.
+
 **Team EcoX | v3.0 — 1-Week MVP Scope, with Detailed Model Construction**
 
 ---

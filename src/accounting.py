@@ -4,6 +4,9 @@ import json
 import os
 from typing import Any, Dict
 
+import numpy as np
+from src.validation import validate_operational_inputs
+
 
 REGISTRY_PATH = os.path.join(
     os.path.dirname(os.path.dirname(__file__)),
@@ -17,76 +20,125 @@ def load_factor_registry() -> Dict[str, Any]:
         return json.load(registry_file)
 
 
-def calculate_activity_baseline(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Calculate the synthetic activity baseline using only recorded demo assumptions."""
-    registry = load_factor_registry()
-    factors = registry["factors"]
+def _factor_provenance(factor: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "factor_id": factor["factor_id"],
+        "factor_source": factor["source"],
+        "factor_geography": factor["geography"],
+        "factor_scope": factor["scope"],
+        "factor_version": factor["version"],
+        "factor_effective_from": factor["effective_from"],
+        "factor_effective_to": factor["effective_to"],
+        "factor_verification_status": factor["verification_status"],
+        "factor_uncertainty": factor["uncertainty"],
+        "factor_methodology": factor["methodology"],
+        "registry_factor_value": factor["value"],
+    }
 
-    electricity_activity = float(data["energy_kwh"])
-    grid_factor = float(data["grid_emission_factor"])
-    furnace_temperature = float(data["furnace_temp_c"])
-    boiler_pressure = float(data["boiler_pressure_bar"])
-    production = float(data["production_volume_tons"])
 
-    components = [
+def calculate_demo_activity_components(
+    energy_kwh: Any,
+    grid_emission_factor: Any,
+    furnace_temp_c: Any,
+    boiler_pressure_bar: Any,
+    production_volume: Any,
+) -> list[Dict[str, Any]]:
+    """Calculate shared demo components; thermal proxies represent excess above reference only."""
+    factors = load_factor_registry()["factors"]
+    furnace_factor = factors["furnace_temperature_proxy"]
+    boiler_factor = factors["boiler_pressure_proxy"]
+    production_factor = factors["production_process_proxy"]
+    grid_factor = factors["grid_electricity"]
+
+    furnace_excess = np.maximum(
+        np.asarray(furnace_temp_c, dtype=float) - furnace_factor["base_value"], 0.0
+    )
+    boiler_excess = np.maximum(
+        np.asarray(boiler_pressure_bar, dtype=float) - boiler_factor["base_value"], 0.0
+    )
+
+    return [
         {
-            "source": "Grid electricity",
-            "activity": electricity_activity,
-            "activity_unit": "kWh",
-            "emission_factor": grid_factor,
-            "factor_unit": "kg CO2/kWh",
-            "factor_id": factors["grid_electricity"]["factor_id"],
-            "factor_source": factors["grid_electricity"]["source"],
-            "emissions_kg_co2": electricity_activity * grid_factor,
+            "source": grid_factor["category"],
+            "activity": energy_kwh,
+            "activity_unit": grid_factor["activity_unit"],
+            "emission_factor": grid_emission_factor,
+            "factor_unit": grid_factor["unit"],
+            **_factor_provenance(grid_factor),
+            "emissions_kg_co2": np.asarray(energy_kwh, dtype=float) * np.asarray(grid_emission_factor, dtype=float),
         },
         {
-            "source": "Thermal process proxy",
-            "activity": furnace_temperature - factors["furnace_temperature_proxy"]["base_value"],
-            "activity_unit": "degree C above 800 C",
-            "emission_factor": factors["furnace_temperature_proxy"]["value"],
-            "factor_unit": factors["furnace_temperature_proxy"]["factor_unit"],
-            "factor_id": factors["furnace_temperature_proxy"]["factor_id"],
-            "factor_source": factors["furnace_temperature_proxy"]["source"],
-            "emissions_kg_co2": (furnace_temperature - 800.0) * factors["furnace_temperature_proxy"]["value"],
+            "source": furnace_factor["category"],
+            "activity": furnace_excess,
+            "activity_unit": furnace_factor["activity_unit"],
+            "emission_factor": furnace_factor["value"],
+            "factor_unit": furnace_factor["unit"],
+            **_factor_provenance(furnace_factor),
+            "emissions_kg_co2": furnace_excess * furnace_factor["value"],
         },
         {
-            "source": "Boiler pressure proxy",
-            "activity": boiler_pressure - factors["boiler_pressure_proxy"]["base_value"],
-            "activity_unit": "bar above 10 bar",
-            "emission_factor": factors["boiler_pressure_proxy"]["value"],
-            "factor_unit": factors["boiler_pressure_proxy"]["factor_unit"],
-            "factor_id": factors["boiler_pressure_proxy"]["factor_id"],
-            "factor_source": factors["boiler_pressure_proxy"]["source"],
-            "emissions_kg_co2": (boiler_pressure - 10.0) * factors["boiler_pressure_proxy"]["value"],
+            "source": boiler_factor["category"],
+            "activity": boiler_excess,
+            "activity_unit": boiler_factor["activity_unit"],
+            "emission_factor": boiler_factor["value"],
+            "factor_unit": boiler_factor["unit"],
+            **_factor_provenance(boiler_factor),
+            "emissions_kg_co2": boiler_excess * boiler_factor["value"],
         },
         {
-            "source": "Production process proxy",
-            "activity": production,
-            "activity_unit": "dataset production units per hour (source field named tons)",
-            "emission_factor": factors["production_process_proxy"]["value"],
-            "factor_unit": factors["production_process_proxy"]["factor_unit"],
-            "factor_id": factors["production_process_proxy"]["factor_id"],
-            "factor_source": factors["production_process_proxy"]["source"],
-            "emissions_kg_co2": production * factors["production_process_proxy"]["value"],
+            "source": production_factor["category"],
+            "activity": production_volume,
+            "activity_unit": production_factor["activity_unit"],
+            "emission_factor": production_factor["value"],
+            "factor_unit": production_factor["unit"],
+            **_factor_provenance(production_factor),
+            "emissions_kg_co2": np.asarray(production_volume, dtype=float) * production_factor["value"],
         },
     ]
 
-    total = sum(component["emissions_kg_co2"] for component in components)
-    for component in components:
-        component["share_percent"] = round(component["emissions_kg_co2"] / total * 100.0, 2) if total else 0.0
 
-    return {
-        "label": "Activity-based demo baseline",
-        "method": "Synthetic activity formula; not verified carbon accounting",
-        "value": round(total, 2),
-        "unit": "kg CO2/hour",
-        "production_intensity_kg_co2_per_production_unit": round(total / production, 3) if production > 0 else None,
-        "factor_registry": registry["registry_name"],
-        "factor_registry_version": registry["registry_version"],
-        "factor_registry_status": registry["status"],
-        "geography": registry["geography"],
-        "scope": registry["scope"],
-        "production_unit_note": registry["production_unit_note"],
-        "components": components,
-        "limitations": "Synthetic demo coefficients; no authoritative factors, source scopes, or facility verification are configured.",
-    }
+class CarbonAccountingEngine:
+    """Single source for explicitly synthetic activity-reference calculations."""
+
+    def calculate_activity_reference(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        validate_operational_inputs(data)
+        registry = load_factor_registry()
+        production = float(data["production_volume_tons"])
+        components = calculate_demo_activity_components(
+            data["energy_kwh"],
+            data["grid_emission_factor"],
+            data["furnace_temp_c"],
+            data["boiler_pressure_bar"],
+            data["production_volume_tons"],
+        )
+        for component in components:
+            for key in ("activity", "emission_factor", "emissions_kg_co2"):
+                component[key] = float(np.asarray(component[key]).item())
+
+        total = sum(component["emissions_kg_co2"] for component in components)
+        for component in components:
+            component["share_percent"] = round(component["emissions_kg_co2"] / total * 100.0, 2) if total else 0.0
+
+        return {
+            "label": "Synthetic Activity Reference",
+            "method": "Synthetic activity formula; not verified carbon accounting",
+            "value": round(total, 2),
+            "unit": "kg CO2/hour",
+            "production_intensity_kg_co2_per_production_unit": round(total / production, 3) if production > 0 else None,
+            "factor_registry": registry["registry_name"],
+            "factor_registry_version": registry["registry_version"],
+            "factor_registry_status": registry["status"],
+            "geography": registry["geography"],
+            "scope": registry["scope"],
+            "production_unit_note": registry["production_unit_note"],
+            "components": components,
+            "limitations": "Synthetic demo coefficients; no authoritative factors, source scopes, or facility verification are configured.",
+        }
+
+
+_ACCOUNTING_ENGINE = CarbonAccountingEngine()
+
+
+def calculate_activity_baseline(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Backward-compatible wrapper for the synthetic activity reference."""
+    return _ACCOUNTING_ENGINE.calculate_activity_reference(data)

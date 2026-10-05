@@ -48,13 +48,13 @@ class OperationalInput(BaseModel):
     production_volume_tons: float = Field(ge=0, le=500, description="Production output, tonnes/hour")
     furnace_temp_c: float = Field(ge=0, le=2000, description="Furnace temperature, degrees C")
     boiler_pressure_bar: float = Field(ge=0, le=100, description="Boiler pressure, bar")
-    shift: int = Field(ge=1, le=3, description="Shift number matching the submitted hour")
-    hour: int = Field(ge=0, le=23, description="Local hour of day")
-    day_of_week: int = Field(ge=0, le=6, description="Day of week, Monday=0 through Sunday=6")
-    is_weekend: int = Field(ge=0, le=1, description="Weekend flag derived from day of week")
-    energy_lag1: float = Field(ge=0, le=10000, description="Previous hour energy, kWh")
-    production_lag1: float = Field(ge=0, le=500, description="Previous hour production, tonnes")
-    rolling_avg_energy_3h: float = Field(ge=0, le=10000, description="Current and prior two-hour mean energy, kWh")
+    shift: int | None = Field(default=None, ge=1, le=3, description="Optional shift context; not used by the active model")
+    hour: int | None = Field(default=None, ge=0, le=23, description="Optional local hour context; not used by the active model")
+    day_of_week: int | None = Field(default=None, ge=0, le=6, description="Optional day context; not used by the active model")
+    is_weekend: int | None = Field(default=None, ge=0, le=1, description="Optional weekend context; not used by the active model")
+    energy_lag1: float | None = Field(default=None, ge=0, le=10000, description="Optional experimental lag; not used by the active model")
+    production_lag1: float | None = Field(default=None, ge=0, le=500, description="Optional experimental lag; not used by the active model")
+    rolling_avg_energy_3h: float | None = Field(default=None, ge=0, le=10000, description="Optional experimental rolling feature; not used by the active model")
 
     @model_validator(mode="after")
     def validate_operating_context(self):
@@ -121,7 +121,7 @@ async def predict_emissions(payload: OperationalInput):
     """Returns an ML estimate, empirical residual range, input trace, and demo baseline."""
     if not ecosense:
         raise HTTPException(status_code=500, detail="Model engine offline.")
-    data_dict = payload.model_dump()
+    data_dict = payload.model_dump(exclude_none=True)
     result = ecosense.predict(data_dict)
     return result
 
@@ -130,7 +130,7 @@ async def explain_prediction(payload: OperationalInput):
     """Computes SHAP waterfall feature contribution breakdown for input sample."""
     if not ecosense:
         raise HTTPException(status_code=500, detail="Model engine offline.")
-    data_dict = payload.model_dump()
+    data_dict = payload.model_dump(exclude_none=True)
     explanation = ecosense.explain(data_dict)
     return explanation
 
@@ -139,7 +139,7 @@ async def simulate_scenario(payload: SimulationInput):
     """Simulates what-if scenarios and calculates net carbon reduction and savings breakdown."""
     if not ecosense:
         raise HTTPException(status_code=500, detail="Model engine offline.")
-    base_dict = payload.baseline_data.model_dump()
+    base_dict = payload.baseline_data.model_dump(exclude_none=True)
     try:
         sim_result = ecosense.simulate(base_dict, payload.modifications)
     except ValueError as error:
@@ -153,9 +153,16 @@ async def get_recommendations(payload: OperationalInput):
     """Returns dynamic carbon optimization recommendations based on operational parameters and SHAP analysis."""
     if not ecosense:
         raise HTTPException(status_code=500, detail="Model engine offline.")
-    data_dict = payload.model_dump()
-    recs = ecosense.generate_recommendations(data_dict)
-    return {"recommendations": recs, "count": len(recs)}
+    data_dict = payload.model_dump(exclude_none=True)
+    prediction = ecosense.predict(data_dict)
+    recs = ecosense.generate_recommendations(data_dict) if prediction["prediction_validity"]["prediction_available"] else []
+    return {
+        "recommendations": recs,
+        "count": len(recs),
+        "model_version": ecosense.metrics.get("model_version"),
+        "prediction_validity": prediction["prediction_validity"],
+        "model_support": prediction["model_support"],
+    }
 
 @app.get("/api/report")
 async def generate_esg_report():
@@ -170,6 +177,15 @@ async def generate_esg_report():
     avg_grid_factor = round(float(df["grid_emission_factor"].mean()), 3)
     synthetic_label_intensity = round(float(df["emissions_kg_co2"].sum() / df["production_volume_tons"].sum()), 3)
     model_metadata = ecosense.metrics if ecosense else {}
+    missing_values = {column: int(count) for column, count in df.isna().sum().items()}
+    total_cells = int(df.shape[0] * df.shape[1])
+    field_completeness = round(100.0 * (1.0 - sum(missing_values.values()) / total_cells), 2) if total_cells else None
+    limitations = [
+        "Bundled hourly records and targets are synthetic.",
+        "Grid factor geography and source are not verified.",
+        "Thermal and production coefficients are generator assumptions, not authoritative emission factors.",
+        "No sensor freshness, drift, or post-intervention verification is available.",
+    ]
     
     return {
         "report_title": "EcoSense Synthetic Demonstration Summary",
@@ -194,11 +210,55 @@ async def generate_esg_report():
             "scenario_estimate": "Available per scenario request; not guaranteed",
             "verified_post_intervention": "Unavailable; no implementation verification records exist",
         },
+        "sections": {
+            "accounted_emissions": {
+                "status": "UNAVAILABLE",
+                "reason": "No authoritative, site-configured factors or verified activity records are available.",
+            },
+            "ml_estimates": {
+                "status": "PER_REQUEST_ONLY",
+                "description": "Current-state estimates are returned by /api/predict; no aggregate facility estimate is stored in this report.",
+            },
+            "scenario_estimates": {
+                "status": "PER_REQUEST_ONLY",
+                "description": "Explicit what-if estimates are returned by /api/simulate and are not guaranteed savings.",
+            },
+            "observed_verified_emissions": {
+                "status": "UNAVAILABLE",
+                "value": None,
+                "reason": "No measured post-intervention observations are recorded.",
+            },
+            "carbon_intensity": {
+                "status": "SYNTHETIC_LABEL_ONLY",
+                "value_kg_co2_per_submitted_production_unit": synthetic_label_intensity,
+                "production_unit_note": "The source unit named tons is not documented as metric or short tons; no conversion is applied.",
+            },
+            "data_quality": {
+                "classification": "SYNTHETIC_DEMONSTRATION_DATA",
+                "field_completeness_percent": field_completeness,
+                "missing_values_by_column": missing_values,
+                "source_authenticity": "NOT_VERIFIED",
+                "sensor_freshness": "NOT_ASSESSED",
+                "anomalies": "NOT_ASSESSED",
+            },
+            "model_information": {
+                "model_type": model_metadata.get("model_type"),
+                "model_version": model_metadata.get("model_version"),
+                "features": model_metadata.get("feature_cols"),
+                "training_rows": model_metadata.get("model_training_rows"),
+                "calibration_rows": model_metadata.get("calibration_rows"),
+                "test_rows": model_metadata.get("test_rows"),
+                "mae_kg_co2_per_hour": model_metadata.get("test_mae"),
+                "rmse_kg_co2_per_hour": model_metadata.get("test_rmse"),
+                "r2": model_metadata.get("test_r2"),
+                "prediction_interval_method": model_metadata.get("prediction_interval_method"),
+                "training_environment": model_metadata.get("model_environment"),
+            },
+            "major_drivers": "Available per prediction through /api/explain; no aggregate drivers are claimed in this report.",
+            "recommendations": "Screening prompts are available per request; no verified financial or production impact is configured.",
+            "verification": "Unavailable; implementation and post-intervention measurement records do not exist.",
+            "limitations": limitations,
+        },
         "regulatory_compliance": {"status": "NOT ASSESSED", "reason": "This prototype does not implement a regulatory accounting methodology or independent audit."},
-        "limitations": [
-            "Bundled hourly records and targets are synthetic.",
-            "Grid factor geography and source are not verified.",
-            "Thermal and production coefficients are generator assumptions, not authoritative emission factors.",
-            "No sensor freshness, drift, or post-intervention verification is available.",
-        ],
+        "limitations": limitations,
     }

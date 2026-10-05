@@ -623,7 +623,9 @@
         <input id="f-boiler" type="number" min="0" max="100" step="0.5" placeholder="e.g. 22.5" title="Boiler pressure from the instrument reading for this hour."/>
       </div>
 
-      <div class="field-group-label">Shift &amp; Time</div>
+      <details class="field advanced-context">
+        <summary>Advanced / experimental context (not used by active model)</summary>
+        <p class="sidebar-note">Optional shift, calendar, lag, and rolling readings are recorded only; they do not change this estimate.</p>
 
       <div class="field">
         <label for="f-shift">Work Shift</label>
@@ -666,11 +668,12 @@
         <label for="f-rolling">3-Hour Rolling Average Energy (kWh)</label>
         <input id="f-rolling" type="number" min="0" max="10000" step="50" placeholder="e.g. 2410" title="Average energy across this hour and the previous two hourly readings."/>
       </div>
+      </details>
 
     </div>
     <div class="sidebar-footer">
       <button class="run-btn" id="run-btn" onclick="runAnalysis()">Run Analysis</button>
-      <p class="sidebar-note">All 11 fields must be filled before running.</p>
+      <p class="sidebar-note">Five measured fields are required.</p>
     </div>
   </div>
 
@@ -697,7 +700,7 @@
           </div>
           <div class="kpi-row">
             <div class="kpi-cell">
-              <div class="kpi-label">Activity-Based Demo Baseline</div>
+              <div class="kpi-label">Synthetic Activity Reference</div>
               <div class="kpi-value" id="kpi-baseline">—</div>
               <div class="kpi-sub">Synthetic formula · kg CO₂/hour</div>
             </div>
@@ -817,7 +820,21 @@
           <div class="rec-list" id="rec-list"></div>
         </div>
 
-        <!-- Section 4: Submitted parameters (echo) -->
+        <!-- Section 4: Historical Baseline & Verification -->
+        <div class="section">
+          <div class="section-head">
+            <span class="section-title">Historical Baseline, Targets &amp; Verification</span>
+            <span class="section-sub">Roadmap items</span>
+          </div>
+          <div class="empty" style="padding: 1.5rem; text-align: left; border: 1px solid var(--line);">
+            <p style="color:var(--text-3); font-size:.8rem; line-height:1.5;">
+              <strong>Unavailable:</strong> Real temporal forecasting, drift detection, anomaly detection, equipment hierarchy, historical targets, persistent audit storage, verified post-intervention outcomes, and constrained multi-scenario optimization are explicitly deferred.<br/>
+              EcoSense does not display placeholder baselines or verification records.
+            </p>
+          </div>
+        </div>
+
+        <!-- Section 5: Submitted parameters (echo) -->
         <div class="section">
           <div class="section-head">
             <span class="section-title">Submitted Parameters</span>
@@ -871,12 +888,6 @@
     { id:'f-prod',      label:'Production Output' },
     { id:'f-furnace',   label:'Furnace Temperature' },
     { id:'f-boiler',    label:'Boiler Pressure' },
-    { id:'f-shift',     label:'Work Shift' },
-    { id:'f-hour',      label:'Hour of Day' },
-    { id:'f-day',       label:'Day of Week' },
-    { id:'f-lag-energy',label:'Previous Hour Energy' },
-    { id:'f-lag-prod',  label:'Previous Hour Production' },
-    { id:'f-rolling',   label:'3-Hour Rolling Average Energy' },
   ];
 
   function gatherInputs() {
@@ -893,17 +904,32 @@
     const ranges = [
       ['f-energy', 0, 10000, 'Energy Consumption'], ['f-grid', 0, 2, 'Grid Carbon Intensity'],
       ['f-prod', 0, 500, 'Production Output'], ['f-furnace', 0, 2000, 'Furnace Temperature'],
-      ['f-boiler', 0, 100, 'Boiler Pressure'], ['f-hour', 0, 23, 'Hour of Day'],
-      ['f-lag-energy', 0, 10000, 'Previous Hour Energy'], ['f-lag-prod', 0, 500, 'Previous Hour Production'],
-      ['f-rolling', 0, 10000, '3-Hour Rolling Average Energy'],
+      ['f-boiler', 0, 100, 'Boiler Pressure'],
     ];
     for (const [id, min, max, label] of ranges) {
       const value = Number(vals[id]);
       if (!Number.isFinite(value) || value < min || value > max) return `${label} must be between ${min} and ${max}.`;
     }
-    const hour = Number(vals['f-hour']);
-    const expectedShift = hour >= 16 ? 2 : hour >= 8 ? 1 : 3;
-    if (Number(vals['f-shift']) !== expectedShift) return `Selected shift does not match hour ${hour}; expected shift ${expectedShift}.`;
+    const shift = document.getElementById('f-shift').value;
+    const hourText = document.getElementById('f-hour').value.trim();
+    if ((shift === '') !== (hourText === '')) return 'Provide both shift and hour, or leave both unset.';
+    if (hourText !== '') {
+      const hour = Number(hourText);
+      if (!Number.isInteger(hour) || hour < 0 || hour > 23) return 'Hour of Day must be an integer from 0 to 23.';
+      const expectedShift = hour >= 16 ? 2 : hour >= 8 ? 1 : 3;
+      if (Number(shift) !== expectedShift) return `Selected shift does not match hour ${hour}; expected shift ${expectedShift}.`;
+    }
+    const optionalRanges = [
+      ['f-lag-energy', 0, 10000, 'Previous Hour Energy'],
+      ['f-lag-prod', 0, 500, 'Previous Hour Production'],
+      ['f-rolling', 0, 10000, '3-Hour Rolling Average Energy'],
+    ];
+    for (const [id, min, max, label] of optionalRanges) {
+      const text = document.getElementById(id).value.trim();
+      if (!text) continue;
+      const value = Number(text);
+      if (!Number.isFinite(value) || value < min || value > max) return `${label} must be between ${min} and ${max}.`;
+    }
     return null;
   }
 
@@ -932,22 +958,28 @@
       return;
     }
 
+    hide('results');
     hide('empty-state');
-    const day = parseInt(vals['f-day']);
     lastSample = {
       energy_kwh:           parseFloat(vals['f-energy']),
       grid_emission_factor: parseFloat(vals['f-grid']),
       production_volume_tons: parseFloat(vals['f-prod']),
       furnace_temp_c:       parseFloat(vals['f-furnace']),
       boiler_pressure_bar:  parseFloat(vals['f-boiler']),
-      shift:                parseInt(vals['f-shift']),
-      hour:                 parseInt(vals['f-hour']),
-      day_of_week:          day,
-      is_weekend:           day >= 5 ? 1 : 0,
-      energy_lag1:          parseFloat(vals['f-lag-energy']),
-      production_lag1:      parseFloat(vals['f-lag-prod']),
-      rolling_avg_energy_3h: parseFloat(vals['f-rolling']),
     };
+    const shift = document.getElementById('f-shift').value;
+    const hour = document.getElementById('f-hour').value.trim();
+    if (shift !== '' && hour !== '') Object.assign(lastSample, {shift:Number(shift), hour:Number(hour)});
+    const day = document.getElementById('f-day').value;
+    if (day !== '') Object.assign(lastSample, {day_of_week:Number(day), is_weekend:Number(day) >= 5 ? 1 : 0});
+    for (const [id, key] of Object.entries({
+      'f-lag-energy':'energy_lag1',
+      'f-lag-prod':'production_lag1',
+      'f-rolling':'rolling_avg_energy_3h',
+    })) {
+      const value = document.getElementById(id).value.trim();
+      if (value !== '') lastSample[key] = Number(value);
+    }
 
     try {
       const responses = await Promise.all([
@@ -962,6 +994,9 @@
         throw new Error(typeof detail === 'string' ? detail : 'The submitted values were rejected.');
       }
       const [pred, expl, recs] = payloads;
+      if (!pred.prediction_validity?.prediction_available) {
+        throw new Error(`Prediction unavailable for this operating condition. ${pred.prediction_validity?.reason || ''}`);
+      }
 
       renderPrediction(pred);
       renderSHAP(expl);
@@ -976,6 +1011,7 @@
       });
       show('results');
     } catch (e) {
+      hide('results'); show('empty-state');
       errBar.textContent = e.message || `Could not reach the API at ${API}.`;
       errBar.style.display = 'block';
     }
@@ -986,26 +1022,28 @@
   // ── Render prediction ─────────────────────────────────────
   function renderPrediction(d) {
     const trace = d.traceability;
-    const baseline = trace.activity_based_demo_baseline;
+    const baseline = trace.activity_reference;
     setText('kpi-baseline', `${mono(baseline.value,1)} kg CO₂`);
     setText('kpi-pred', `${mono(d.predicted_emissions_kg_co2,1)} kg CO₂`);
     setText('kpi-ci', d.lower_bound_95 == null ? 'Unavailable' : `${mono(d.lower_bound_95,0)} – ${mono(d.upper_bound_95,0)}`);
     setText('kpi-interval-sub', d.prediction_interval.observed_holdout_coverage == null ? 'Prediction interval unavailable' : `${mono(d.prediction_interval.observed_holdout_coverage * 100,1)}% final-test coverage · not a guarantee`);
     setText('kpi-intensity', d.carbon_intensity_kg_co2_per_production_unit == null ? 'Unavailable' : `${mono(d.carbon_intensity_kg_co2_per_production_unit,2)} kg CO₂/unit`);
-    setText('data-quality', `Required-field completeness: ${trace.input_quality.completeness_percent.toFixed(0)}%. Model support: ${trace.input_quality.training_range_status}${trace.input_quality.outside_training_range.length ? ` (${trace.input_quality.outside_training_range.join(', ')})` : ''}. Fit ranges are not process safety limits. ${trace.input_quality.limitations}`);
+    setText('data-quality', `Prediction validity: ${d.prediction_validity.status}. Required-input completeness: ${trace.input_quality.completeness_percent.toFixed(0)}%. Model support: ${d.model_support.status}${d.model_support.affected_features.length ? ` (${d.model_support.affected_features.join(', ')})` : ''}. Fit ranges are not process safety limits. ${trace.input_quality.limitations}`);
     setHTML('pred-interp',
       `<strong>ML prediction:</strong> ${mono(d.predicted_emissions_kg_co2,1)} kg CO₂/hour. ` +
-      `<strong>Activity-based demo baseline:</strong> ${mono(baseline.value,1)} kg CO₂/hour. ` +
-      `The baseline is synthetic and is not verified carbon accounting.`
+      `<strong>Synthetic Activity Reference:</strong> ${mono(baseline.value,1)} kg CO₂/hour. ` +
+      `This formula is synthetic and is not verified carbon accounting.`
     );
 
-    const componentRows = baseline.components.map(component => `<tr><td>${component.source}</td><td>${mono(component.activity,2)} ${component.activity_unit}</td><td>${mono(component.emission_factor,3)} ${component.factor_unit}</td><td>${mono(component.emissions_kg_co2,2)} kg CO₂</td><td>${component.factor_id}</td><td>${component.factor_source}</td></tr>`).join('');
+    const componentRows = baseline.components.map(component => `<tr><td>${component.source}</td><td>${mono(component.activity,2)} ${component.activity_unit}</td><td>${mono(component.emission_factor,3)} ${component.factor_unit}</td><td>${mono(component.emissions_kg_co2,2)} kg CO₂</td><td>${component.share_percent}%</td></tr>`).join('');
+    const factorRows = baseline.components.map(component => `<tr><td>${component.source}</td><td>${component.factor_id}</td><td>${component.factor_source}</td><td>${component.factor_geography}</td><td>${component.factor_scope}</td><td>${component.factor_version}</td><td>${component.factor_effective_from ?? 'Unavailable'}</td><td>${component.factor_effective_to ?? 'Unavailable'}</td><td>${component.factor_verification_status}</td><td>${component.factor_uncertainty ?? 'Unavailable'}</td><td>${component.factor_methodology}</td></tr>`).join('');
     const inputRows = Object.entries(trace.input_values).map(([key, value]) => `<tr><td>${key}</td><td>${value}</td></tr>`).join('');
     const featureRows = Object.entries(trace.model_features).map(([key, value]) => `<tr><td>${key}</td><td>${mono(value,3)}</td></tr>`).join('');
     setHTML('pred-trace', `
       <p><strong>Method:</strong> ${d.method} · ${d.unit}. The activity formula is a synthetic reference only.</p>
       <h4>Actual inputs received</h4><table class="echo-table"><tbody>${inputRows}</tbody></table>
-      <h4>Demo baseline components</h4><table class="echo-table"><thead><tr><th>Source</th><th>Activity</th><th>Factor</th><th>Result</th><th>Factor ID</th><th>Provenance</th></tr></thead><tbody>${componentRows}</tbody></table>
+      <h4>Synthetic Activity Reference components</h4><table class="echo-table"><thead><tr><th>Source</th><th>Activity</th><th>Factor</th><th>Result</th><th>Share</th></tr></thead><tbody>${componentRows}</tbody></table>
+      <h4>Factor provenance</h4><table class="echo-table"><thead><tr><th>Source</th><th>Factor ID</th><th>Source</th><th>Geography</th><th>Scope</th><th>Version</th><th>Effective from</th><th>Effective to</th><th>Verification</th><th>Uncertainty</th><th>Methodology</th></tr></thead><tbody>${factorRows}</tbody></table>
       <p>${baseline.factor_registry} · ${baseline.factor_registry_version} · ${baseline.factor_registry_status} · Region: ${baseline.geography} · Scope: ${baseline.scope}</p>
       <p>Production unit note: ${baseline.production_unit_note}</p>
       <h4>Derived ML features</h4><table class="echo-table"><tbody>${featureRows}</tbody></table>
@@ -1013,7 +1051,7 @@
       <p><strong>Rows:</strong> fit ${trace.model.training_rows} · calibration ${trace.model.calibration_rows} · final test ${trace.model.test_rows} · source dataset ${trace.model.dataset_rows}.</p>
       <p><strong>Validation:</strong> ${trace.model.evaluation_method} · MAE ${mono(trace.model.test_mae_kg_co2_per_hour,2)} kg CO₂/hour · RMSE ${mono(trace.model.test_rmse_kg_co2_per_hour,2)} kg CO₂/hour · R² ${mono(trace.model.test_r2,4)} · data SHA-256 ${trace.model.training_data_sha256}.</p>
       <p><strong>Empirical interval:</strong> ${d.prediction_interval.method} · nominal ${(d.prediction_interval.nominal_coverage * 100).toFixed(0)}% · observed final-test coverage ${(d.prediction_interval.observed_holdout_coverage * 100).toFixed(1)}% · ${mono(d.prediction_interval.half_width_kg_co2_per_hour,2)} kg CO₂/hour half-width. ${d.prediction_interval.caveat}</p>
-      <p><strong>Difference from synthetic demo baseline:</strong> ${mono(d.traceability.difference_from_demo_baseline_kg_co2_per_hour,2)} kg CO₂/hour. This is not a measured or verified adjustment.</p>
+      <p><strong>Difference from Synthetic Activity Reference:</strong> ${mono(d.traceability.difference_from_demo_baseline_kg_co2_per_hour,2)} kg CO₂/hour. This is not a measured or verified adjustment.</p>
       <p>${trace.measurement_period} Generated ${trace.timestamp_utc}. ${trace.production_unit_note} ${baseline.limitations}</p>`);
   }
 
@@ -1088,7 +1126,7 @@
       const productionCaveat = productionChanged && intensityChanged ? ' Production changed; interpret absolute emissions alongside intensity.' : '';
       interp.textContent = `${d.method}: ${change < 0 ? 'estimated emissions decrease' : isNeutral ? 'no estimated emissions change' : 'estimated emissions increase'} of ${mono(Math.abs(change),1)} kg CO₂/hour (${mono(Math.abs(d.percentage_reduction),2)}%). Estimated change only; verify with post-intervention measurements.${productionCaveat}`;
 
-      setText('sim-accounting', `Separate synthetic activity baseline: ${mono(d.baseline_activity_based_demo.value,1)} → ${mono(d.scenario_activity_based_demo.value,1)} kg CO₂/hour. This is not verified accounting.`);
+      setText('sim-accounting', `Separate Synthetic Activity Reference: ${mono(d.baseline_activity_reference.value,1)} → ${mono(d.scenario_activity_reference.value,1)} kg CO₂/hour. This is not verified accounting.`);
       const scenarioRows = Object.entries(d.baseline_inputs).map(([key, value]) => `<tr><td>${key}</td><td>${value}</td><td>${d.scenario_inputs[key]}</td></tr>`).join('');
       setHTML('sim-trace', `<p><strong>Current input → scenario input → model re-evaluation → estimated change.</strong> All values below came from the request or the explicitly entered scenario.</p><table class="echo-table"><thead><tr><th>Input</th><th>Current</th><th>Scenario</th></tr></thead><tbody>${scenarioRows}</tbody></table><p>Current ML estimate: ${mono(d.baseline_emission_kg_co2,2)} kg CO₂/hour · Scenario ML estimate: ${mono(d.simulated_emission_kg_co2,2)} kg CO₂/hour · Estimated change: ${change > 0 ? '+' : ''}${mono(change,2)} kg CO₂/hour.</p><p>${d.limitation}</p>`);
 
@@ -1138,14 +1176,12 @@
       ['Production Output', `${sample.production_volume_tons} tons/hr`],
       ['Furnace Temperature', `${sample.furnace_temp_c} °C`],
       ['Boiler Pressure', `${sample.boiler_pressure_bar} Bar`],
-      ['Work Shift', shifts[sample.shift]],
-      ['Hour of Day', `${sample.hour}:00`],
-      ['Day of Week', days[sample.day_of_week]],
-      ['Weekend', sample.is_weekend ? 'Yes' : 'No'],
-      ['Previous Hour Energy', `${sample.energy_lag1} kWh`],
-      ['Previous Hour Production', `${sample.production_lag1} tons`],
-      ['3-Hour Rolling Avg Energy', `${sample.rolling_avg_energy_3h} kWh`],
     ];
+    if (sample.shift != null) rows.push(['Work Shift', shifts[sample.shift]], ['Hour of Day', `${sample.hour}:00`]);
+    if (sample.day_of_week != null) rows.push(['Day of Week', days[sample.day_of_week]], ['Weekend', sample.is_weekend ? 'Yes' : 'No']);
+    if (sample.energy_lag1 != null) rows.push(['Previous Hour Energy', `${sample.energy_lag1} kWh`]);
+    if (sample.production_lag1 != null) rows.push(['Previous Hour Production', `${sample.production_lag1} tons`]);
+    if (sample.rolling_avg_energy_3h != null) rows.push(['3-Hour Rolling Avg Energy', `${sample.rolling_avg_energy_3h} kWh`]);
     document.getElementById('echo-body').innerHTML =
       rows.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
   }

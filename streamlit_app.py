@@ -36,71 +36,80 @@ model = get_model(os.stat(MODEL_PATH).st_mtime_ns)
 # ── Custom CSS ─────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-.stApp { background: #070d1a !important; }
+:root {
+    --app-ground: #f1f3ed;
+    --app-surface: #ffffff;
+    --app-ink: #26332b;
+    --app-muted: #58645c;
+    --app-rule: #ccd4ca;
+    --app-olive: #3f6249;
+    --app-oxide: #a44c37;
+}
+html, body, [class*="css"] { font-family: 'IBM Plex Sans', sans-serif !important; }
+.stApp { background: var(--app-ground) !important; color: var(--app-ink) !important; }
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
-    background: rgba(12,20,40,0.95) !important;
-    border-right: 1px solid rgba(255,255,255,.08) !important;
+    background: #e7ebe4 !important;
+    border-right: 1px solid var(--app-rule) !important;
 }
 section[data-testid="stSidebar"] .stMarkdown p,
-section[data-testid="stSidebar"] label { color: #94a3b8 !important; }
+section[data-testid="stSidebar"] label { color: var(--app-muted) !important; }
 
 /* Metric cards */
 div[data-testid="metric-container"] {
-    background: rgba(14,23,42,0.8);
-    border: 1px solid rgba(255,255,255,.09);
-    border-radius: 12px;
+    background: var(--app-surface);
+    border: 1px solid var(--app-rule);
+    border-radius: 6px;
     padding: 1rem 1.2rem !important;
 }
-div[data-testid="metric-container"] label { color: #94a3b8 !important; font-size: 0.76rem !important; text-transform: uppercase; letter-spacing: .05em; }
-div[data-testid="stMetricValue"] { color: #f1f5f9 !important; font-weight: 800 !important; font-size: 1.5rem !important; }
+div[data-testid="metric-container"] label { color: var(--app-muted) !important; font-size: 0.76rem !important; text-transform: uppercase; letter-spacing: .05em; }
+div[data-testid="stMetricValue"] { color: var(--app-ink) !important; font-weight: 600 !important; font-size: 1.5rem !important; }
 
 /* Input fields */
 div[data-baseweb="input"] > div,
 div[data-baseweb="select"] > div {
-    background: rgba(255,255,255,.04) !important;
-    border-color: rgba(255,255,255,.12) !important;
-    color: #f1f5f9 !important;
-    border-radius: 8px !important;
+    background: #ffffff !important;
+    border-color: #bfc9bd !important;
+    color: var(--app-ink) !important;
+    border-radius: 4px !important;
 }
 div[data-baseweb="input"] > div:focus-within,
 div[data-baseweb="select"] > div:focus-within {
-    border-color: #10b981 !important;
-    box-shadow: 0 0 0 2px rgba(16,185,129,.2) !important;
+    border-color: var(--app-olive) !important;
+    box-shadow: 0 0 0 1px var(--app-olive) !important;
 }
-input { color: #f1f5f9 !important; }
+input { color: var(--app-ink) !important; }
 
 /* Buttons */
 .stButton > button {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    background: var(--app-olive) !important;
     color: #fff !important; border: none !important; border-radius: 8px !important;
-    font-weight: 700 !important; font-size: .9rem !important;
+    font-weight: 600 !important; font-size: .9rem !important;
     padding: .6rem 1.5rem !important;
-    box-shadow: 0 0 18px rgba(16,185,129,.25) !important;
-    transition: all .2s ease !important;
+    box-shadow: none !important;
+    transition: background-color .15s ease !important;
 }
-.stButton > button:hover { opacity: 0.85 !important; }
+.stButton > button:hover { background: #314c39 !important; }
 
 /* Alert/info boxes */
 .stAlert { border-radius: 10px !important; }
 
 /* Expander */
-details summary { color: #94a3b8 !important; font-size: .85rem !important; }
+details summary { color: var(--app-olive) !important; font-size: .85rem !important; }
 
 /* Text */
-h1, h2, h3 { color: #f1f5f9 !important; font-weight: 800 !important; }
-p, .stMarkdown { color: #cbd5e1; }
+h1, h2, h3 { color: var(--app-ink) !important; font-weight: 600 !important; }
+p, .stMarkdown { color: var(--app-muted); }
 
 /* Separator */
-hr { border-color: rgba(255,255,255,.07) !important; }
+hr { border-color: var(--app-rule) !important; }
 
 /* Form labels */
 .stNumberInput label, .stSelectbox label, .stTextInput label {
-    color: #94a3b8 !important; font-size: .8rem !important; font-weight: 600 !important;
+    color: var(--app-muted) !important; font-size: .8rem !important; font-weight: 600 !important;
     text-transform: uppercase; letter-spacing: .04em;
 }
 
@@ -109,10 +118,10 @@ hr { border-color: rgba(255,255,255,.07) !important; }
 
 /* Empty state banner */
 .empty-state {
-    background: rgba(16,185,129,.04);
-    border: 1px dashed rgba(16,185,129,.25);
+    background: #f8faf6;
+    border: 1px dashed var(--app-rule);
     border-radius: 12px; padding: 2.5rem;
-    text-align: center; color: #94a3b8;
+    text-align: center; color: var(--app-muted);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -120,12 +129,12 @@ hr { border-color: rgba(255,255,255,.07) !important; }
 # ── Header ─────────────────────────────────────────────────
 st.markdown("# 🌿 EcoSense — AI Carbon Optimization Copilot")
 st.markdown(
-    "Enter your factory's **real operational readings** in the sidebar. "
-    "Hit **▶ Run Analysis** to get predictions, SHAP explanations, "
-    "what-if simulations, and recommendations — all derived from your data."
+    "Enter five measured operating inputs in the sidebar. "
+    "The active model estimates current emissions, shows model contributions, "
+    "and compares explicitly submitted what-if scenarios."
 )
 st.markdown("## Input guide")
-st.caption("Use readings from the same facility and hour. EcoSense does not infer missing measurements.")
+st.caption("Required model inputs must describe the same operating interval. Advanced context is optional and is not used by the current estimator.")
 st.markdown("""
 | Input | What it means | Source or calculation |
 |---|---|---|
@@ -134,19 +143,12 @@ st.markdown("""
 | Production output | Product made this hour (tons/hr). | Production counter or shift log. |
 | Furnace temperature | Primary furnace operating temperature (°C). | Furnace sensor or control-system reading. |
 | Boiler pressure | Boiler operating pressure (bar). | Boiler sensor or control-system reading. |
-| Work shift | Shift active when readings were taken. | Select from the facility schedule. |
-| Hour of day | Local hour of measurement (0–23). | Read from the measurement timestamp. |
-| Day of week | Calendar day of measurement. | Read from the date; used to derive weekend status. |
-| Previous-hour energy | Electricity used in the preceding hour (kWh). | Facility energy meter's prior-hour reading. |
-| Previous-hour production | Product made in the preceding hour (tons). | Production counter or log for the prior hour. |
-| 3-hour rolling energy average | Mean energy use for this and the prior two hours (kWh). | (Current + previous two hourly readings) ÷ 3. |
-| Weekend flag (model feature) | 1 on Saturday/Sunday; otherwise 0. | Derived automatically from day of week. |
 """)
 st.markdown("---")
 
 # ── Sidebar — Pure Input Form ───────────────────────────────
 st.sidebar.markdown("## ⚙️ Factory Operational Inputs")
-st.sidebar.markdown("*All fields required. No defaults are assumed.*")
+st.sidebar.markdown("*Five measured fields required for the active model. No measured values are assumed.*")
 
 demo_mode = st.sidebar.toggle("🛠️ Enable Demo Mode (Simulated Data)", value=False)
 if demo_mode:
@@ -202,51 +204,47 @@ with st.sidebar.form(key="input_form", enter_to_submit=False):
         help="Measured pressure in the boiler system."
     )
 
-    st.markdown("### 🕐 Shift & Time")
-    shift_idx = 1 if demo_mode else 0
-    day_idx = 3 if demo_mode else 0
-    shift = st.selectbox(
-        "Work Shift",
-        options=["— Select —", "Shift 1 (08:00 – 16:00)", "Shift 2 (16:00 – 00:00)", "Shift 3 (00:00 – 08:00)"],
-        index=shift_idx,
-        help="Production shift active when these readings were taken."
-    )
-    hour = st.number_input(
-        "Hour of Day (0–23)",
-        min_value=0, max_value=23, value=default_vals["hour"],
-        step=1, placeholder="e.g. 14",
-        help="Local hour when these readings were recorded (0–23)."
-    )
-    day_of_week = st.selectbox(
-        "Day of Week",
-        options=["— Select —", "Monday (0)", "Tuesday (1)", "Wednesday (2)",
-                 "Thursday (3)", "Friday (4)", "Saturday (5)", "Sunday (6)"],
-        index=day_idx,
-        help="Day these readings were recorded; weekend status is derived from it."
-    )
-
-    st.markdown("### 📊 Previous Hour (Lag Features)")
-    energy_lag = st.number_input(
-        "Previous Hour Energy (kWh)",
-        min_value=0.0, max_value=10000.0, value=default_vals["energy_lag"],
-        step=50.0, placeholder="e.g. 2380",
-        help="Energy use from the hour immediately before the current reading."
-    )
-    production_lag = st.number_input(
-        "Previous Hour Production (Tons)",
-        min_value=0.0, max_value=500.0, value=default_vals["prod_lag"],
-        step=1.0, placeholder="e.g. 46",
-        help="Production volume from the hour immediately before the current reading."
-    )
-    rolling_avg_energy = st.number_input(
-        "3-Hour Rolling Average Energy (kWh)",
-        min_value=0.0, max_value=10000.0, value=default_vals["rolling"],
-        step=50.0, placeholder="e.g. 2410",
-        help="Mean energy use across the current and two previous hours."
-    )
+    with st.expander("Advanced / experimental context (not used by the active model)", expanded=demo_mode):
+        st.caption("Optional shift, calendar, lag, and rolling values are retained for traceability only; they do not affect this model's estimate.")
+        shift_idx = 1 if demo_mode else 0
+        day_idx = 3 if demo_mode else 0
+        shift = st.selectbox(
+            "Work Shift",
+            options=["— Select —", "Shift 1 (08:00 – 16:00)", "Shift 2 (16:00 – 00:00)", "Shift 3 (00:00 – 08:00)"],
+            index=shift_idx,
+            help="Optional shift context; if supplied, provide the matching hour."
+        )
+        hour = st.number_input(
+            "Hour of Day (0–23)",
+            min_value=0, max_value=23, value=default_vals["hour"],
+            step=1, placeholder="optional",
+            help="Optional local hour context; not used by the active model."
+        )
+        day_of_week = st.selectbox(
+            "Day of Week",
+            options=["— Select —", "Monday (0)", "Tuesday (1)", "Wednesday (2)",
+                     "Thursday (3)", "Friday (4)", "Saturday (5)", "Sunday (6)"],
+            index=day_idx,
+            help="Optional calendar context; not used by the active model."
+        )
+        energy_lag = st.number_input(
+            "Previous Hour Energy (kWh)", min_value=0.0, max_value=10000.0,
+            value=default_vals["energy_lag"], step=50.0, placeholder="optional",
+            help="Optional experimental lag; not used by the active model."
+        )
+        production_lag = st.number_input(
+            "Previous Hour Production (Tons)", min_value=0.0, max_value=500.0,
+            value=default_vals["prod_lag"], step=1.0, placeholder="optional",
+            help="Optional experimental lag; not used by the active model."
+        )
+        rolling_avg_energy = st.number_input(
+            "3-Hour Rolling Average Energy (kWh)", min_value=0.0, max_value=10000.0,
+            value=default_vals["rolling"], step=50.0, placeholder="optional",
+            help="Optional experimental rolling feature; not used by the active model."
+        )
 
     st.markdown("---")
-    submitted = st.form_submit_button("▶ Run Analysis", use_container_width=True)
+    submitted = st.form_submit_button("▶ Run Analysis", width="stretch")
 
 # ── Validation ─────────────────────────────────────────────
 SHIFT_MAP = {
@@ -265,12 +263,6 @@ required_fields = {
     "Production Output": production_tons,
     "Furnace Temperature": furnace_temp,
     "Boiler Pressure": boiler_pressure,
-    "Work Shift": None if shift == "— Select —" else shift,
-    "Hour of Day": hour,
-    "Day of Week": None if day_of_week == "— Select —" else day_of_week,
-    "Previous Hour Energy": energy_lag,
-    "Previous Hour Production": production_lag,
-    "3-Hour Rolling Avg Energy": rolling_avg_energy,
 }
 
 # ── Preserve a submitted analysis across Streamlit reruns ──
@@ -280,31 +272,40 @@ if submitted:
         st.error(f"⚠️ Please fill in all required fields before running analysis: **{', '.join(missing)}**")
         st.stop()
 
-    selected_shift = SHIFT_MAP[shift]
-    expected_shift = 1 if 8 <= int(hour) < 16 else 2 if int(hour) >= 16 else 3
-    if selected_shift != expected_shift:
-        st.error(
-            f"Input rejected: selected Shift {selected_shift} does not match hour {int(hour)}. "
-            f"Select Shift {expected_shift} for this hour."
-        )
+    shift_supplied = shift != "— Select —"
+    hour_supplied = hour is not None
+    if shift_supplied != hour_supplied:
+        st.error("Input rejected: provide both shift and hour, or leave both unset.")
         st.stop()
+    if shift_supplied:
+        selected_shift = SHIFT_MAP[shift]
+        expected_shift = 1 if 8 <= int(hour) < 16 else 2 if int(hour) >= 16 else 3
+        if selected_shift != expected_shift:
+            st.error(
+                f"Input rejected: selected Shift {selected_shift} does not match hour {int(hour)}. "
+                f"Select Shift {expected_shift} for this hour."
+            )
+            st.stop()
 
-    is_weekend = 1 if DAY_MAP[day_of_week] >= 5 else 0
     sample = {
         "energy_kwh": float(energy_kwh),
         "grid_emission_factor": float(grid_factor),
         "production_volume_tons": float(production_tons),
         "furnace_temp_c": float(furnace_temp),
         "boiler_pressure_bar": float(boiler_pressure),
-        "shift": int(SHIFT_MAP[shift]),
-        "hour": int(hour),
-        "day_of_week": int(DAY_MAP[day_of_week]),
-        "is_weekend": int(is_weekend),
-        "energy_lag1": float(energy_lag),
-        "production_lag1": float(production_lag),
-        "rolling_avg_energy_3h": float(rolling_avg_energy),
         "demo_mode": demo_mode
     }
+    if shift_supplied:
+        sample.update({"shift": int(SHIFT_MAP[shift]), "hour": int(hour)})
+    if day_of_week != "— Select —":
+        sample["day_of_week"] = int(DAY_MAP[day_of_week])
+        sample["is_weekend"] = int(DAY_MAP[day_of_week] >= 5)
+    optional_inputs = {
+        "energy_lag1": energy_lag,
+        "production_lag1": production_lag,
+        "rolling_avg_energy_3h": rolling_avg_energy,
+    }
+    sample.update({key: float(value) for key, value in optional_inputs.items() if value is not None})
     if st.session_state.get("submitted_sample") != sample:
         st.session_state["simulation_result"] = None
     st.session_state["submitted_sample"] = sample
@@ -313,19 +314,24 @@ else:
 
 # ── Empty State ────────────────────────────────────────────
 if sample is None:
-    st.markdown("""
+    empty_state_note = (
+        "Demo mode is active; these are simulated values, not facility observations."
+        if demo_mode
+        else "Use readings from your facility; source authenticity is not independently verified."
+    )
+    st.markdown(f"""
 <div class="empty-state">
     <h3 style="color:#10b981; margin-bottom:.5rem;">📋 No data entered yet</h3>
     <p>Fill in your factory's operational readings in the <strong>sidebar</strong> and click <strong>▶ Run Analysis</strong>.</p>
     <p style="font-size:.83rem; margin-top:.75rem; color:#64748b;">
-        All values must be real measurements from your facility.<br/>
+        {empty_state_note}<br/>
         EcoSense does not assume, interpolate, or hallucinate any data.
     </p>
 </div>
 """, unsafe_allow_html=True)
     st.stop()
 
-is_weekend = sample["is_weekend"]
+is_weekend = sample.get("is_weekend")
 scenario_key = hashlib.sha256(repr(tuple(sample.items())).encode("utf-8")).hexdigest()[:12]
 
 # ── Section 1: Prediction ──────────────────────────────────
@@ -334,14 +340,23 @@ if sample.get("demo_mode", False):
     
 st.markdown("## 🔮 Emission Prediction")
 pred = model.predict(sample)
+validity = pred["prediction_validity"]
+if not validity["prediction_available"]:
+    st.error("Prediction unavailable for this operating condition.")
+    st.caption(f"{validity['reason']} Review the reported model-support range details before submitting another estimate.")
+    st.json(pred["model_support"])
+    st.stop()
+if validity["status"] == "DEGRADED":
+    st.warning(f"Model extrapolation is outside observed training conditions. {validity['reason']}")
+
 pred_val = pred["predicted_emissions_kg_co2"]
 trace = pred["traceability"]
-activity_baseline = trace["activity_based_demo_baseline"]
+activity_baseline = trace["activity_reference"]
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Activity-based demo baseline", f"{activity_baseline['value']:,.1f} kg CO₂/hr")
+c1.metric("Synthetic Activity Reference", f"{activity_baseline['value']:,.1f} kg CO₂/hr")
 c2.metric("ML-predicted emissions", f"{pred_val:,.1f} kg CO₂/hr")
-c3.metric("ML carbon intensity", f"{pred['carbon_intensity_kg_co2_per_production_unit']:,.2f} kg CO₂/unit")
+c3.metric("ML carbon intensity", f"{pred['carbon_intensity_kg_co2_per_production_unit']:,.2f} kg CO₂/submitted unit")
 c4.metric("Required input completeness", f"{trace['input_quality']['completeness_percent']:.0f}%", "all required values supplied")
 if trace["input_quality"]["outside_training_range"]:
     st.warning(
@@ -355,102 +370,58 @@ st.info(
     f"**ML prediction range:** {pred['lower_bound_95']:,.0f}–{pred['upper_bound_95']:,.0f} kg CO₂/hr. "
     f"This empirical residual interval had {pred['prediction_interval']['observed_holdout_coverage']:.1%} coverage "
     f"on the chronological holdout; future coverage is not guaranteed. The {activity_baseline['value']:,.1f} kg CO₂/hr "
-    "activity-based value is a synthetic demo baseline, not verified or accounted facility emissions."
+    "Synthetic Activity Reference is a demo formula, not verified or accounted facility emissions."
 )
+
+with st.expander("How reliable is this estimate?"):
+    st.markdown(f"**Prediction validity:** {validity['status']} · {validity['reason']}")
+    st.markdown(f"**Model support:** {pred['model_support']['status']} · affected features: {', '.join(pred['model_support']['affected_features']) or 'none'}")
+    st.markdown(f"**Required-input completeness:** {pred['data_quality']['completeness_percent']:.0f}%. This checks field presence only; it is not sensor/data authenticity or model confidence.")
+    st.markdown(f"**Empirical interval:** {pred['prediction_interval']['method']} · final-test observed coverage {pred['prediction_interval']['observed_holdout_coverage']:.1%} on synthetic data.")
+    st.markdown(f"**Validation:** MAE {trace['model']['test_mae_kg_co2_per_hour']:.2f} kg CO₂/hr · RMSE {trace['model']['test_rmse_kg_co2_per_hour']:.2f} kg CO₂/hr · R² {trace['model']['test_r2']:.4f}. These scores are not real-factory validation.")
+    st.caption("Timestamp freshness, sensor anomalies, drift, and independent measurement verification are not assessed.")
 
 with st.expander("How was this ML prediction derived?", expanded=True):
     st.markdown(f"**Method:** {pred['method']}  \n**Unit:** {pred['unit']}  \n**Model:** {trace['model']['name']}  \n**Model version:** {trace['model']['version']}  \n**Feature schema:** {trace['model']['feature_schema_version']} · {trace['model']['model_feature_count']} engineered features  \n**Fit / calibration / test rows:** {trace['model']['training_rows']:,} / {trace['model']['calibration_rows']:,} / {trace['model']['test_rows']:,}  \n**Trained:** {trace['model']['trained_at_utc']}  \n**Measurement period:** {trace['measurement_period']}")
     st.markdown("**Submitted inputs**")
-    st.dataframe(pd.DataFrame([{"Input": key, "Value": value} for key, value in trace["input_values"].items()]), use_container_width=True, hide_index=True)
-    st.markdown("**Activity-based demo baseline components**")
-    st.dataframe(pd.DataFrame(activity_baseline["components"])[["source", "activity", "activity_unit", "emission_factor", "factor_unit", "emissions_kg_co2", "factor_id", "factor_source"]], use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame([{"Input": key, "Value": value} for key, value in trace["input_values"].items()]), width="stretch", hide_index=True)
+    st.markdown("**Synthetic Activity Reference components**")
+    st.dataframe(pd.DataFrame(activity_baseline["components"])[[
+        "source", "activity", "activity_unit", "emission_factor", "factor_unit", "emissions_kg_co2", "share_percent",
+    ]], width="stretch", hide_index=True)
+    st.markdown("**Factor provenance**")
+    st.dataframe(pd.DataFrame(activity_baseline["components"])[[
+        "source", "factor_id", "factor_source", "factor_geography", "factor_scope", "factor_version",
+        "factor_effective_from", "factor_effective_to", "factor_verification_status", "factor_uncertainty",
+        "registry_factor_value", "factor_methodology",
+    ]], width="stretch", hide_index=True)
     st.caption(f"Factor registry: {activity_baseline['factor_registry']} ({activity_baseline['factor_registry_version']}). {activity_baseline['factor_registry_status']} Geography/scope: {activity_baseline['geography']} / {activity_baseline['scope']}. {trace['production_unit_note']}")
     st.markdown("**Derived model features**")
-    st.dataframe(pd.DataFrame([{"Feature": key, "Value": value} for key, value in trace["model_features"].items()]), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame([{"Feature": key, "Value": value} for key, value in trace["model_features"].items()]), width="stretch", hide_index=True)
     st.markdown(
         f"""
-1. **Activity-based demo baseline:** submitted electricity, temperature, boiler pressure, and production are combined using the listed demo coefficients: **{activity_baseline['value']:,.1f} kg CO₂/hr**.
+1. **Synthetic Activity Reference:** submitted electricity, temperature, boiler pressure, and production are combined using the listed demo coefficients: **{activity_baseline['value']:,.1f} kg CO₂/hr**.
 2. **ML prediction:** readings are transformed into electricity emissions (`kWh × submitted grid factor`), furnace temperature, boiler pressure, and production, then passed to the regression model: **{pred_val:,.1f} kg CO₂/hr**.
 3. **Prediction interval:** ±{pred['prediction_interval']['half_width_kg_co2_per_hour']:.2f} kg CO₂/hr from chronological calibration residuals. Final-test observed coverage: {pred['prediction_interval']['observed_holdout_coverage']:.1%}.
-4. **Difference from demo baseline:** {trace['difference_from_demo_baseline_kg_co2_per_hour']:+.2f} kg CO₂/hr. This is an ML-versus-demo comparison, not a measured adjustment.
+4. **Difference from the synthetic reference:** {trace['difference_from_demo_baseline_kg_co2_per_hour']:+.2f} kg CO₂/hr. This is an ML-versus-demo comparison, not a measured adjustment.
 """
     )
     st.caption(pred["prediction_interval"]["caveat"] + " The baseline coefficients are synthetic and unverified; no official factor source, region, or reporting scope is configured.")
 
 st.markdown("---")
 
-# ── Section 1c: Temporal Forecasting ───────────────────────
-st.markdown("## 📈 Temporal Forecasting")
-st.caption("Forecasted emissions for the upcoming operational periods based on current schedules.")
-
-f1, f2, f3 = st.columns(3)
-with f1:
-    st.metric("Current Hour", f"{pred_val:,.1f} kg CO₂/hr")
-with f2:
-    st.metric("Next 6 Hours (Forecast)", f"{pred_val * 1.02:,.1f} kg CO₂/hr", "±120 kg CO₂/hr", delta_color="off")
-with f3:
-    st.metric("Next 24 Hours (Forecast)", f"{pred_val * 0.95:,.1f} kg CO₂/hr", "±250 kg CO₂/hr", delta_color="off")
-
-st.markdown("---")
-
-# ── Section 1b: Anomalies & Hotspots ───────────────────────
-st.markdown("## 🚨 Anomalies & Carbon Hotspots")
-c_hot, c_anom = st.columns(2)
-
-with c_hot:
-    st.markdown("### Top Carbon Hotspots")
-    # Using baseline components for hotspots
-    hotspots = sorted(activity_baseline["components"], key=lambda x: x["emissions_kg_co2"], reverse=True)
-    for idx, hs in enumerate(hotspots[:3]):
-        st.markdown(f"**{idx+1}. {hs['source']}**")
-        st.progress(hs["share_percent"] / 100.0)
-        st.caption(f"{hs['share_percent']:.1f}% ({hs['emissions_kg_co2']:,.1f} kg CO₂/hr)")
-
-with c_anom:
-    st.markdown("### Anomaly Detection")
-    anomalies = []
-    # Simple anomaly logic based on inputs
-    if float(energy_kwh) > 5000:
-        anomalies.append({
-            "message": "Electricity consumption is unusually high (> 5000 kWh).",
-            "impact": "+350 kg CO₂/hr",
-            "causes": "Check for equipment left running or efficiency degradation."
-        })
-    if float(furnace_temp) > 1200:
-        anomalies.append({
-            "message": "Furnace temperature exceeds normal operating range (> 1200 °C).",
-            "impact": "+120 kg CO₂/hr",
-            "causes": "Review thermal insulation or process setpoints."
-        })
-    
-    if anomalies:
-        for anom in anomalies:
-            st.error(f"**ALERT:** {anom['message']}")
-            st.caption(f"Estimated additional emissions: **{anom['impact']}**  \n*Possible causes:* {anom['causes']}")
-    else:
-        st.success("No anomalies detected in the current operational readings.")
-
-st.markdown("---")
-
-# ── Section 2b: Machine / Process Level Attribution ───────
-st.markdown("## 🏭 Process Level Emission Attribution")
-st.caption("Drill down into the facility hierarchy to identify localized carbon contributors.")
-
-hierarchy_data = {
-    "Facility": ["Factory", "Factory", "Factory", "Factory"],
-    "Plant": ["Plant A", "Plant A", "Plant B", "Utilities"],
-    "Production Line": ["Line 1", "Line 2", "Line 3", "HVAC"],
-    "Process": ["Furnace", "Compressor", "Milling", "Cooling"],
-    "Emissions (kg CO₂/hr)": [
-        pred_val * 0.40,
-        pred_val * 0.25,
-        pred_val * 0.20,
-        pred_val * 0.15
-    ]
-}
-
-hier_df = pd.DataFrame(hierarchy_data)
-st.dataframe(hier_df, use_container_width=True, hide_index=True)
+st.markdown("## Synthetic Activity Reference Breakdown")
+st.caption("These formula components are synthetic demonstration proxies, not measured source-wise facility emissions.")
+st.dataframe(
+    pd.DataFrame(activity_baseline["components"])[[
+        "source", "activity", "activity_unit", "emission_factor", "factor_unit",
+        "emissions_kg_co2", "share_percent", "factor_id", "factor_source",
+        "factor_geography", "factor_scope", "factor_version", "factor_verification_status",
+    ]],
+    width="stretch",
+    hide_index=True,
+)
+st.info("Future-horizon forecasting, anomaly detection, and equipment-level attribution are unavailable; no future schedule, configured detection baseline, or machine-level measurements are connected.")
 
 st.markdown("---")
 
@@ -466,7 +437,7 @@ contribs = expl["feature_contributions"]
 names = [c["friendly_name"] for c in contribs]
 vals  = [c["shap_value_kg_co2"] for c in contribs]
 pcts  = [c["impact_percentage"] for c in contribs]
-colors = ["#f43f5e" if v > 0 else "#10b981" for v in vals]
+colors = ["#a44c37" if v > 0 else "#3f6249" for v in vals]
 labels = [
     f"{'▲' if v > 0 else '▼'} {'+' if v > 0 else ''}{v:.1f} kg CO₂ ({p:.1f}%)"
     for v, p in zip(vals, pcts)
@@ -480,24 +451,24 @@ fig_shap = go.Figure(go.Bar(
     marker_line_width=0,
     text=labels,
     textposition="outside",
-    textfont=dict(size=11, color="#f1f5f9"),
+    textfont=dict(size=11, color="#26332b"),
     hovertemplate="<b>%{y}</b><br>SHAP value: %{x:.2f} kg CO₂<extra></extra>"
 ))
 fig_shap.update_layout(
-    template="plotly_dark",
+    template="plotly_white",
     paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(14,23,42,0.5)",
+    plot_bgcolor="rgba(255,255,255,0.55)",
     margin=dict(l=10, r=140, t=20, b=20),
     height=380,
     xaxis=dict(
         title="SHAP Value (kg CO₂ contribution)",
-        gridcolor="rgba(255,255,255,.06)", zeroline=True,
-        zerolinecolor="rgba(255,255,255,.25)", color="#94a3b8"
+        gridcolor="#d8ded5", zeroline=True,
+        zerolinecolor="#8e9a8e", color="#58645c"
     ),
-    yaxis=dict(autorange="reversed", color="#f1f5f9", tickfont=dict(size=11)),
-    font=dict(family="Inter, sans-serif"),
+    yaxis=dict(autorange="reversed", color="#26332b", tickfont=dict(size=11)),
+    font=dict(family="IBM Plex Sans, sans-serif", color="#26332b"),
 )
-st.plotly_chart(fig_shap, use_container_width=True)
+st.plotly_chart(fig_shap, width="stretch")
 
 st.markdown(
     f"**φ₀ Baseline** (model average): `{expl['baseline_emission_kg_co2']:,.1f} kg CO₂` &nbsp;|&nbsp; "
@@ -512,6 +483,14 @@ st.warning(
     f"{direction} emissions by **{abs(top['shap_value_kg_co2']):.1f} kg CO₂** "
     f"— accounting for **{top['impact_percentage']:.1f}%** of total attribution."
 )
+
+with st.expander("Global model behavior (fit-window contribution summary)"):
+    st.caption("Mean absolute additive linear-model contributions over the fit window; these describe synthetic model behavior, not physical causation or real-factory importance.")
+    global_importance = model.metrics.get("global_feature_importance", [])
+    if global_importance:
+        st.dataframe(pd.DataFrame(global_importance), width="stretch", hide_index=True)
+    else:
+        st.info("Global contribution metrics are unavailable for this model artifact.")
 
 st.markdown("---")
 
@@ -560,7 +539,7 @@ with st.expander("⚙️ Set Proposed Changes (expand to edit)", expanded=True):
                 help="Boiler pressure to test after calibration."
             )
 
-        run_sim = st.form_submit_button("⚡ Run What-If Simulation", use_container_width=True)
+        run_sim = st.form_submit_button("⚡ Run What-If Simulation", width="stretch")
 
 if run_sim:
     proposed_values = {
@@ -596,11 +575,11 @@ if saved_simulation and saved_simulation["baseline"] == tuple(sample.items()):
                f"{'−' if is_positive else '+'}{abs(reduction):.1f} kg CO₂/hr",
                delta_color="inverse" if is_positive else "normal")
     sr3.metric("Model-estimated change", f"{reduction:+,.1f} kg CO₂/hr", "positive means lower scenario estimate")
-    sr4.metric("ML intensity, kg CO₂/unit", f"{sim['baseline_intensity_kg_co2_per_production_unit']:.2f} → {sim['scenario_intensity_kg_co2_per_production_unit']:.2f}")
+    sr4.metric("ML intensity, kg CO₂/submitted unit", f"{sim['baseline_intensity_kg_co2_per_production_unit']:.2f} → {sim['scenario_intensity_kg_co2_per_production_unit']:.2f}")
 
     st.caption(
-        f"Separate activity-based demo baseline: {sim['baseline_activity_based_demo']['value']:,.1f} → "
-        f"{sim['scenario_activity_based_demo']['value']:,.1f} kg CO₂/hr. These synthetic formula values are not verified accounting."
+        f"Separate Synthetic Activity Reference: {sim['baseline_activity_reference']['value']:,.1f} → "
+        f"{sim['scenario_activity_reference']['value']:,.1f} kg CO₂/hr. These synthetic formula values are not verified accounting."
     )
 
     if is_positive:
@@ -617,16 +596,34 @@ if saved_simulation and saved_simulation["baseline"] == tuple(sample.items()):
             f"({abs(sim['percentage_reduction']):.2f}%)."
         )
 
-    if sim["scenario_inputs"]["production_volume_tons"] < sim["baseline_inputs"]["production_volume_tons"] and is_positive:
-        st.warning("Absolute emissions are lower while scenario production is also lower. Compare the intensity change before treating this as an improvement.")
+    baseline_intensity = sim["baseline_intensity_kg_co2_per_production_unit"]
+    scenario_intensity = sim["scenario_intensity_kg_co2_per_production_unit"]
+    if is_positive and scenario_intensity > baseline_intensity:
+        st.warning("Absolute emissions decreased, but carbon intensity increased; production decreased faster than emissions in this model-estimated scenario.")
+    elif reduction < 0 and scenario_intensity < baseline_intensity:
+        st.info("Absolute emissions increased while carbon intensity decreased; the submitted production increase outpaced the emissions increase in this model estimate.")
 
-    st.caption("Scenario results are model estimates, not guaranteed savings. The daily equivalent assumes this hourly scenario persists for 24 hours.")
+    st.caption(f"Scenario model support: {sim['prediction_validity']['status']}. Results are model estimates, not guaranteed savings; verify after any approved intervention.")
+    if sim["baseline_prediction_interval"]["available"] and sim["scenario_prediction_interval"]["available"]:
+        base_interval = sim["baseline_prediction_interval"]
+        scenario_interval = sim["scenario_prediction_interval"]
+        st.caption(
+            f"Empirical ranges (not confidence intervals): baseline {base_interval['lower_bound']:,.1f}–{base_interval['upper_bound']:,.1f} "
+            f"kg CO₂/hr; scenario {scenario_interval['lower_bound']:,.1f}–{scenario_interval['upper_bound']:,.1f} kg CO₂/hr. "
+            f"{scenario_interval['caveat']}"
+        )
+    production_change = sim["production_change"]
+    st.caption(
+        f"Submitted production change: {production_change['absolute_change_submitted_units_per_hour']:+.2f} units/hr "
+        f"({production_change['percent_change'] if production_change['percent_change'] is not None else 'Unavailable'}%). "
+        f"Cost impact: {sim['cost_impact']['reason']} Constraint status: {sim['scenario_constraints']['note']}"
+    )
     with st.expander("Scenario inputs and calculation details"):
         scenario_rows = [
             {"Input": name, "Current": value, "Scenario": sim["scenario_inputs"].get(name, value)}
             for name, value in sim["baseline_inputs"].items()
         ]
-        st.dataframe(pd.DataFrame(scenario_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(scenario_rows), width="stretch", hide_index=True)
         st.markdown(f"Current ML estimate: **{sim['baseline_emission_kg_co2']:.2f} kg CO₂/hour**  \nScenario ML estimate: **{sim['simulated_emission_kg_co2']:.2f} kg CO₂/hour**  \nModel-estimated change: **{sim['simulated_emission_kg_co2'] - sim['baseline_emission_kg_co2']:+.2f} kg CO₂/hour**  \n{sim['limitation']}")
     if sim["parameter_impacts"]:
         st.markdown("**How the model attributes the scenario change**")
@@ -650,8 +647,8 @@ else:
 st.markdown("---")
 
 # ── Section 4: Recommendations ────────────────────────────
-st.markdown("## 💡 AI Carbon Optimization Recommendations")
-st.caption("Generated from your submitted operational readings and SHAP analysis.")
+st.markdown("## Operations Review Prompts")
+st.caption("Prototype screening rules use submitted readings and model contributions; they are not validated causal recommendations.")
 
 recs = model.generate_recommendations(sample)
 
@@ -666,17 +663,17 @@ else:
             impact_text = "Not quantified; run and validate a scenario." if rec["potential_saving_kg_co2_day"] is None else f"{rec['potential_saving_kg_co2_day']:.0f} kg CO₂/day"
             st.markdown(
                 f"""
-                <div style="background:rgba(14,23,42,.7);border:1px solid rgba(255,255,255,.09);
+                <div style="background:#ffffff;border:1px solid #ccd4ca;
                      border-radius:12px;padding:1.2rem;height:100%;margin-bottom:1rem;">
                     <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;
-                         letter-spacing:.06em;color:#94a3b8;margin-bottom:.4rem;">{rec['category']}</div>
-                    <div style="font-size:.98rem;font-weight:700;color:#f1f5f9;margin-bottom:.5rem;">
+                         letter-spacing:.06em;color:#58645c;margin-bottom:.4rem;">{rec['category']}</div>
+                    <div style="font-size:.98rem;font-weight:700;color:#26332b;margin-bottom:.5rem;">
                         {priority_icon} {rec['title']}
                     </div>
-                    <div style="font-size:.82rem;color:#94a3b8;line-height:1.5;margin-bottom:.75rem;">
+                    <div style="font-size:.82rem;color:#58645c;line-height:1.5;margin-bottom:.75rem;">
                         {rec['trigger']}<br/>{rec['reason']}<br/>{rec['impact_summary']}
                     </div>
-                    <div style="font-size:.78rem;color:#10b981;font-weight:600;">
+                    <div style="font-size:.78rem;color:#3f6249;font-weight:600;">
                         Estimated effect: {impact_text} · Cost: {rec['cost_impact']}
                     </div>
                 </div>
@@ -690,53 +687,8 @@ else:
 
 st.markdown("---")
 
-# ── Section 4b: Multi-Objective Optimisation ──────────────
-st.markdown("## 🎯 Multi-Objective Optimisation Score")
-st.caption("Evaluates current operations against weighted factory objectives.")
-
-col_opt1, col_opt2 = st.columns([1, 2])
-
-with col_opt1:
-    st.markdown("**Optimisation priorities (Weights)**")
-    st.markdown("- Carbon reduction: **40%**")
-    st.markdown("- Energy cost: **30%**")
-    st.markdown("- Production output: **30%**")
-    st.caption("Weights are configured by the facility manager.")
-
-with col_opt2:
-    # Calculate a mock score out of 100
-    mock_score = min(100, max(0, 85 - (pred_val - 1950) / 50))
-    st.metric("Current Optimisation Score", f"{mock_score:.1f} / 100")
-    st.progress(mock_score / 100.0)
-
-st.markdown("---")
-
-# ── Section 6: Historical Tracking & Verification ─────────────
-st.markdown("## 📈 Historical Baseline & Verification")
-st.caption("Compare current operations against historical averages and verify past interventions.")
-
-h1, h2, h3 = st.columns(3)
-
-# Mocking historical baseline data
-hist_avg = 2190.0
-target = 1950.0
-diff_hist = pred_val - hist_avg
-gap_target = pred_val - target
-
-with h1:
-    st.metric("Historical Average", f"{hist_avg:,.1f} kg CO₂/hr")
-with h2:
-    st.metric("Difference from History", f"{diff_hist:+,.1f} kg CO₂/hr", f"{(diff_hist/hist_avg)*100:+.1f}%", delta_color="inverse")
-with h3:
-    st.metric("Target Emissions", f"{target:,.1f} kg CO₂/hr", f"Gap: {gap_target:,.1f} kg CO₂/hr", delta_color="inverse")
-
-with st.expander("✅ Post-Intervention Verification Log"):
-    st.markdown("This log tracks the actual impact of implemented recommendations to form an **Estimate → Actual** learning loop.")
-    verif_data = [
-        {"Date": "2026-09-28", "Intervention": "Reduced furnace temp by 20°C", "Predicted Reduction": "-165 kg CO₂/hr", "Actual Reduction": "-151 kg CO₂/hr", "Error": "8.5%"},
-        {"Date": "2026-09-15", "Intervention": "Shifted high-load milling to off-peak", "Predicted Reduction": "-85 kg CO₂/hr", "Actual Reduction": "-92 kg CO₂/hr", "Error": "-8.2%"},
-    ]
-    st.dataframe(pd.DataFrame(verif_data), use_container_width=True, hide_index=True)
+st.markdown("## Historical Baseline, Targets & Verification")
+st.info("Unavailable: no measured facility history, configured target, or post-intervention observations are connected. EcoSense does not display placeholder baselines or verification records.")
 
 st.markdown("---")
 
@@ -754,19 +706,24 @@ with st.expander("📋 Your Submitted Operational Parameters (click to review)",
         "Work Shift": shift,
         "Hour of Day": hour,
         "Day of Week": day_of_week,
-        "Weekend Flag": "Yes" if is_weekend else "No",
+        "Weekend Flag": ("Yes" if is_weekend else "No") if is_weekend is not None else "Not supplied",
         "Previous Hour Energy (kWh)": energy_lag,
         "Previous Hour Production (Tons)": production_lag,
         "3-Hour Rolling Avg Energy (kWh)": rolling_avg_energy,
     }.items()])
-    st.dataframe(echo_df, use_container_width=True, hide_index=True)
+    st.dataframe(echo_df, width="stretch", hide_index=True)
 
 # ── Footer ─────────────────────────────────────────────────
+footer_data_note = (
+        "DEMO MODE: synthetic simulated inputs."
+        if sample.get("demo_mode", False)
+        else "Submitted inputs; source authenticity is not independently verified."
+)
 st.markdown("""
 <div style='text-align:center;padding:1.5rem;color:#94a3b8;
       font-size:.78rem;border-top:1px solid rgba(255,255,255,.06);margin-top:1rem;'>
   EcoSense v3.0 &nbsp;·&nbsp; AI Carbon Optimization Copilot &nbsp;·&nbsp;
     Team EcoX &nbsp;·&nbsp; Physics-informed Regression + SHAP &nbsp;·&nbsp;
-  All results derived from user-provided data only.
+    {footer_data_note}
 </div>
-""", unsafe_allow_html=True)
+""".format(footer_data_note=footer_data_note), unsafe_allow_html=True)

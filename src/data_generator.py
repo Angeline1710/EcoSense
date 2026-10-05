@@ -1,14 +1,13 @@
 import os
 import numpy as np
 import pandas as pd
-from src.accounting import load_factor_registry
+from src.accounting import calculate_demo_activity_components
 
 def generate_industrial_dataset(output_path: str = "data/industrial_emissions.csv", days: int = 90, seed: int = 42) -> pd.DataFrame:
     """
-    Generates a realistic synthetic hourly industrial dataset for carbon emissions modeling.
+    Generates controlled synthetic hourly demonstration data, not measured facility observations.
     """
     np.random.seed(seed)
-    factors = load_factor_registry()["factors"]
     n_hours = days * 24
     
     # 1. Timestamps
@@ -62,19 +61,17 @@ def generate_industrial_dataset(output_path: str = "data/industrial_emissions.cs
     df["production_lag1"] = df["production_volume_tons"].shift(1).bfill()
     df["rolling_avg_energy_3h"] = df["energy_kwh"].rolling(window=3, min_periods=1).mean()
     
-    # 4. Target Variable: Carbon Emissions (kg CO2)
-    # Physics-informed combined direct (Scope 1 process heat) + indirect (Scope 2 electricity) emissions
-    electricity_emissions = df["energy_kwh"] * df["grid_emission_factor"]
-    thermal_emissions = (
-        (df["furnace_temp_c"] - factors["furnace_temperature_proxy"]["base_value"])
-        * factors["furnace_temperature_proxy"]["value"]
-        + (df["boiler_pressure_bar"] - factors["boiler_pressure_proxy"]["base_value"])
-        * factors["boiler_pressure_proxy"]["value"]
+    # 4. Target labels reuse the same synthetic activity formula as runtime accounting.
+    components = calculate_demo_activity_components(
+        df["energy_kwh"],
+        df["grid_emission_factor"],
+        df["furnace_temp_c"],
+        df["boiler_pressure_bar"],
+        df["production_volume_tons"],
     )
-    process_emissions = df["production_volume_tons"] * factors["production_process_proxy"]["value"]
+    activity_emissions = sum(component["emissions_kg_co2"] for component in components)
     noise = np.random.normal(0, 20.0, n_hours)
-    
-    df["emissions_kg_co2"] = np.round(electricity_emissions + thermal_emissions + process_emissions + noise, 2)
+    df["emissions_kg_co2"] = np.round(np.maximum(activity_emissions + noise, 0.0), 2)
     
     # Ensure directory exists and save
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
