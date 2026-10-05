@@ -280,6 +280,15 @@ if submitted:
         st.error(f"⚠️ Please fill in all required fields before running analysis: **{', '.join(missing)}**")
         st.stop()
 
+    selected_shift = SHIFT_MAP[shift]
+    expected_shift = 1 if 8 <= int(hour) < 16 else 2 if int(hour) >= 16 else 3
+    if selected_shift != expected_shift:
+        st.error(
+            f"Input rejected: selected Shift {selected_shift} does not match hour {int(hour)}. "
+            f"Select Shift {expected_shift} for this hour."
+        )
+        st.stop()
+
     is_weekend = 1 if DAY_MAP[day_of_week] >= 5 else 0
     sample = {
         "energy_kwh": float(energy_kwh),

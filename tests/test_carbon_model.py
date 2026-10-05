@@ -1,6 +1,8 @@
 import unittest
+from pathlib import Path
 
 from fastapi.testclient import TestClient
+from streamlit.testing.v1 import AppTest
 
 from src.accounting import calculate_activity_baseline, load_factor_registry
 from src.backend import app
@@ -110,6 +112,34 @@ class APIContractTests(unittest.TestCase):
         self.assertEqual(report["regulatory_compliance"]["status"], "NOT ASSESSED")
         self.assertIsNone(report["summary"]["accounted_facility_emissions"])
         self.assertIn("Synthetic", report["data_classification"])
+
+
+class StreamlitInputValidationTests(unittest.TestCase):
+    def test_shift_hour_mismatch_is_reported_without_prediction_crash(self):
+        app_path = Path(__file__).resolve().parents[1] / "streamlit_app.py"
+        app_test = AppTest.from_file(str(app_path), default_timeout=60).run()
+        values = {
+            "Energy Consumption": 2200.0,
+            "Grid Carbon Intensity": 0.65,
+            "Production Output": 45.0,
+            "Furnace Temperature": 1020.0,
+            "Boiler Pressure": 22.0,
+            "Hour of Day": 16,
+            "Previous Hour Energy": 2150.0,
+            "Previous Hour Production": 44.0,
+            "3-Hour Rolling Average Energy": 2180.0,
+        }
+        for widget in app_test.number_input:
+            for label_prefix, value in values.items():
+                if widget.label.startswith(label_prefix):
+                    widget.set_value(value)
+        app_test.selectbox[0].select_index(1)
+        app_test.selectbox[1].select_index(3)
+        app_test.button[0].click().run()
+
+        self.assertFalse(app_test.exception)
+        self.assertTrue(any("Select Shift 2" in error.value for error in app_test.error))
+        self.assertFalse(any(metric.label == "ML-predicted emissions" for metric in app_test.metric))
 
 
 if __name__ == "__main__":
