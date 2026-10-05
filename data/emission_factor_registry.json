@@ -1,0 +1,69 @@
+{
+  "registry_name": "EcoSense demo factor assumptions",
+  "registry_version": "demo-1.0.0",
+  "status": "Unverified synthetic demonstration factors; not suitable for reporting or compliance",
+  "geography": "Unspecified",
+  "scope": "Unclassified",
+  "effective_from": null,
+  "effective_to": null,
+  "production_unit_note": "The source column is named production_volume_tons; whether this denotes metric or short tons is not documented. Intensity uses the submitted value without conversion.",
+  "factors": {
+    "grid_electricity": {
+      "factor_id": "DEMO-ELECTRICITY-INPUT",
+      "category": "Grid electricity",
+      "value": null,
+      "factor_unit": "kg CO2/kWh",
+      "activity_unit": "kWh",
+      "methodology": "Hourly electricity activity multiplied by the grid factor submitted with the input",
+      "source": "User-supplied input; authoritative source and region are not configured",
+      "uncertainty": null
+    },
+    "furnace_temperature_proxy": {
+      "factor_id": "DEMO-THERMAL-TEMP-001",
+      "category": "Thermal process proxy",
+      "value": 0.45,
+      "factor_unit": "kg CO2/(degree C above 800 C per hour)",
+      "activity_unit": "degree C above 800 C",
+      "base_value": 800,
+        "methodology": "Synthetic generator coefficient: (furnace temperature - 800 C) multiplied by 0.45",
+      "source": "Existing synthetic dataset generator; not an authoritative emission factor",
+      "geography": "Unspecified",
+      "scope": "Unclassified demo proxy",
+      "version": "demo-1.0.0",
+      "effective_from": null,
+      "effective_to": null,
+      "uncertainty": null
+    },
+    "boiler_pressure_proxy": {
+      "factor_id": "DEMO-BOILER-PRESSURE-001",
+      "category": "Boiler pressure proxy",
+      "value": 8.5,
+      "factor_unit": "kg CO2/(bar above 10 bar per hour)",
+      "activity_unit": "bar above 10 bar",
+      "base_value": 10,
+        "methodology": "Synthetic generator coefficient: (boiler pressure - 10 bar) multiplied by 8.5",
+      "source": "Existing synthetic dataset generator; not an authoritative emission factor",
+      "geography": "Unspecified",
+      "scope": "Unclassified demo proxy",
+      "version": "demo-1.0.0",
+      "effective_from": null,
+      "effective_to": null,
+      "uncertainty": null
+    },
+    "production_process_proxy": {
+      "factor_id": "DEMO-PRODUCTION-001",
+      "category": "Production process proxy",
+      "value": 3.8,
+      "factor_unit": "kg CO2 per dataset production unit",
+      "activity_unit": "dataset production units per hour (source field named tons)",
+      "methodology": "Synthetic generator coefficient: production volume multiplied by 3.8",
+      "source": "Existing synthetic dataset generator; not an authoritative emission factor",
+      "geography": "Unspecified",
+      "scope": "Unclassified demo proxy",
+      "version": "demo-1.0.0",
+      "effective_from": null,
+      "effective_to": null,
+      "uncertainty": null
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "electricity_emissions_proxy": {
+    "coefficient": 0.9998239499571816,
+    "mean": 1735.8071579042953,
+    "std": 497.24849733181895,
+    "min": 769.8023159414723,
+    "max": 2926.2673388305357,
+    "friendly_name": "Electricity Emissions (kg CO\u2082/hr)"
+  },
+  "furnace_temp_c": {
+    "coefficient": 0.4619654702909961,
+    "mean": 1114.7211732105845,
+    "std": 39.681734451542546,
+    "min": 974.9615465227978,
+    "max": 1242.0398036389124,
+    "friendly_name": "Furnace Temperature (\u00b0C)"
+  },
+  "boiler_pressure_bar": {
+    "coefficient": 9.150496266189531,
+    "mean": 27.819047593821534,
+    "std": 1.892124813130615,
+    "min": 21.96484625214082,
+    "max": 32.0,
+    "friendly_name": "Boiler Pressure (Bar)"
+  },
+  "production_volume_tons": {
+    "coefficient": 3.6178935536365167,
+    "mean": 41.18707264071206,
+    "std": 7.466902978653217,
+    "min": 18.38373305046168,
+    "max": 60.32183048858054,
+    "friendly_name": "Production Output (Tons/hr)"
+  }
+}

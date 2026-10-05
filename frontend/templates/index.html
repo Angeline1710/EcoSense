@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="EcoSense — Industrial Carbon Emission Monitoring. Enter operational readings to generate predictions."/>
+  <title>EcoSense — Carbon Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #111318;
+      --panel:     #181b22;
+      --panel-alt: #1e2129;
+      --line:      #2a2d35;
+      --line-hi:   #3a3d47;
+      --text:      #dde1e8;
+      --text-2:    #8b909d;
+      --text-3:    #555a66;
+      --accent:    #3d8ef5;   /* single, functional accent — used only for interactive elements */
+      --pos:       #3aad77;   /* emission reduction — green */
+      --neg:       #d95f5f;   /* emission increase — red */
+      --warn:      #c98a2b;
+      --mono:      'DM Mono', 'Courier New', monospace;
+      --sans:      'DM Sans', system-ui, sans-serif;
+    }
+
+    html { font-size: 14px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── TOPBAR ─────────────────────────────────────────── */
+    .topbar {
+      height: 48px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      flex-shrink: 0;
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .brand {
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: .01em;
+      text-decoration: none;
+    }
+    .brand span {
+      color: var(--text-2);
+      font-weight: 400;
+      margin-left: .3rem;
+    }
+    .topbar-sep {
+      width: 1px;
+      height: 18px;
+      background: var(--line);
+    }
+    .model-meta {
+      font-family: var(--mono);
+      font-size: .75rem;
+      color: var(--text-2);
+    }
+    .api-status {
+      font-size: .78rem;
+      color: var(--text-2);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .api-status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-3);
+    }
+    .api-status-dot.online { background: var(--pos); }
+
+    /* ── LAYOUT ─────────────────────────────────────────── */
+    .shell {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBAR ─────────────────────────────────────────── */
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-head {
+      padding: 1rem 1.25rem .75rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .sidebar-head h2 {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .sidebar-head p {
+      font-size: .75rem;
+      color: var(--text-3);
+      margin-top: .2rem;
+      line-height: 1.4;
+    }
+    .sidebar-body {
+      padding: .75rem 1.25rem;
+      flex: 1;
+    }
+    .field-group-label {
+      font-size: .7rem;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin: 1rem 0 .5rem;
+      padding-bottom: .3rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .field-group-label:first-child { margin-top: 0; }
+    .field {
+      margin-bottom: .65rem;
+    }
+    .field label {
+      display: block;
+      font-size: .75rem;
+      font-weight: 500;
+      color: var(--text-2);
+      margin-bottom: .3rem;
+    }
+    .field input,
+    .field select {
+      width: 100%;
+      background: var(--panel-alt);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 4px;
+      padding: .45rem .6rem;
+      font-size: .82rem;
+      font-family: var(--mono);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .field input::placeholder { color: var(--text-3); font-family: var(--sans); }
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+    }
+    .field select option { background: var(--panel-alt); color: var(--text); }
+
+    .sidebar-footer {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid var(--line);
+    }
+    .run-btn {
+      width: 100%;
+      padding: .55rem 1rem;
+      background: var(--accent);
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      font-size: .85rem;
+      font-weight: 600;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .run-btn:hover { opacity: .85; }
+    .run-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .sidebar-note {
+      font-size: .7rem;
+      color: var(--text-3);
+      text-align: center;
+      margin-top: .5rem;
+      line-height: 1.4;
+    }
+
+    /* ── MAIN ─────────────────────────────────────────── */
+    main {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .main-inner {
+      padding: 1.5rem;
+      flex: 1;
+    }
+
+    /* ── VALIDATION ERROR ──────────────────────────────── */
+    .err-bar {
+      background: rgba(217,95,95,.1);
+      border: 1px solid rgba(217,95,95,.35);
+      border-radius: 4px;
+      padding: .6rem .9rem;
+      font-size: .8rem;
+      color: var(--neg);
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    /* ── EMPTY STATE ───────────────────────────────────── */
+    .empty {
+      border: 1px dashed var(--line-hi);
+      border-radius: 4px;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .empty h3 { font-size: .95rem; font-weight: 600; color: var(--text-2); margin-bottom: .4rem; }
+    .empty p  { font-size: .8rem; color: var(--text-3); line-height: 1.6; }
+
+    /* ── SECTION HEADER ────────────────────────────────── */
+    .section { margin-bottom: 1.75rem; }
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      gap: .75rem;
+      margin-bottom: .85rem;
+      padding-bottom: .55rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .section-title {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+    .section-sub {
+      font-size: .75rem;
+      color: var(--text-3);
+    }
+
+    /* ── KPI ROW ───────────────────────────────────────── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    .kpi-cell {
+      background: var(--panel);
+      padding: .9rem 1rem;
+    }
+    .kpi-label {
+      font-size: .68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-3);
+      margin-bottom: .35rem;
+    }
+    .kpi-value {
+      font-family: var(--mono);
+      font-size: 1.35rem;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1;
+    }
+    .kpi-value.accent-pos { color: var(--pos); }
+    .kpi-value.accent-neg { color: var(--neg); }
+    .kpi-sub {
+      font-size: .72rem;
+      color: var(--text-3);
+      margin-top: .25rem;
+    }
+
+    /* ── INTERPRETATION BOX ────────────────────────────── */
+    .interp {
+      background: var(--panel-alt);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 4px 4px 0;
+      padding: .7rem 1rem;
+      font-size: .8rem;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin-bottom: 1rem;
+    }
+    .interp strong { color: var(--text); font-weight: 600; }
+
+    /* ── TWO-COLUMN GRID ───────────────────────────────── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media(max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* ── SHAP LIST ─────────────────────────────────────── */
+    .shap-caption {
+      font-size: .75rem;
+      color: var(--text-3);
+      margin-bottom: .75rem;
+      line-height: 1.5;
+    }
+    .shap-list { display: flex; flex-direction: column; gap: .55rem; }
+    .shap-row {}
+    .shap-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: .77rem;
+      margin-bottom: .22rem;
+    }
+    .shap-name { color: var(--text-2); font-weight: 500; }
+    .shap-num  { font-family: var(--mono); font-weight: 500; }
+    .shap-num.pos { color: var(--neg); }
+    .shap-num.neg { color: var(--pos); }
+    .shap-bar-bg {
+      height: 4px;
+      background: var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .shap-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width .5s ease;
+    }
+    .shap-bar-fill.pos { background: var(--neg); }
+    .shap-bar-fill.neg { background: var(--pos); }
+    .shap-footer {
+      font-size: .72rem;
+      color: var(--text-3);
+      margin-top: .75rem;
+      font-family: var(--mono);
+    }
+    .shap-driver {
+      background: var(--panel-alt);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--warn);
+      border-radius: 0 4px 4px 0;
+      padding: .6rem .9rem;
+      font-size: .78rem;
+      color: var(--text-2);
+      margin-top: .75rem;
+      line-height: 1.5;
+    }
+    .shap-driver strong { color: var(--text); }
+
+    /* ── SIMULATOR ─────────────────────────────────────── */
+    .sim-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .65rem;
+      margin-bottom: .85rem;
+    }
+    .sim-field label {
+      display: block;
+      font-size: .72rem;
+      font-weight: 500;
+      color: var(--text-3);
+      margin-bottom: .25rem;
+    }
+    .sim-field input {
+      width: 100%;
+      background: var(--panel-alt);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 4px;
+      padding: .42rem .6rem;
+      font-size: .8rem;
+      font-family: var(--mono);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .sim-field input::placeholder { color: var(--text-3); font-family: var(--sans); font-size:.75rem; }
+    .sim-field input:focus { border-color: var(--accent); }
+
+    .sim-btn {
+      padding: .48rem 1.1rem;
+      background: transparent;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      color: var(--accent);
+      font-size: .82rem;
+      font-weight: 600;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .sim-btn:hover { background: var(--accent); color: #fff; }
+
+    .sim-result-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: .85rem;
+    }
+    .sim-cell {
+      background: var(--panel-alt);
+      padding: .75rem .9rem;
+    }
+    .sim-cell-label {
+      font-size: .68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-3);
+      margin-bottom: .3rem;
+    }
+    .sim-cell-val {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .sim-cell-val.pos { color: var(--pos); }
+    .sim-cell-val.neg { color: var(--neg); }
+
+    .sim-interp {
+      background: var(--panel-alt);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--pos);
+      border-radius: 0 4px 4px 0;
+      padding: .6rem .9rem;
+      font-size: .78rem;
+      color: var(--text-2);
+      margin-top: .75rem;
+      line-height: 1.5;
+    }
+    .sim-interp.neg { border-left-color: var(--neg); }
+    .sim-interp strong { color: var(--text); font-weight: 600; }
+
+    .breakdown-list {
+      margin-top: .65rem;
+      font-size: .77rem;
+      color: var(--text-3);
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
+    }
+    .breakdown-list span { color: var(--text-2); }
+    .breakdown-list code {
+      font-family: var(--mono);
+      background: var(--line);
+      padding: .05rem .3rem;
+      border-radius: 3px;
+      font-size: .72rem;
+      color: var(--text);
+    }
+
+    /* ── RECOMMENDATIONS ────────────────────────────────── */
+    .rec-list { display: flex; flex-direction: column; gap: .65rem; }
+    .rec-item {
+      background: var(--panel-alt);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: .9rem 1rem;
+    }
+    .rec-item-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: .75rem;
+      margin-bottom: .4rem;
+    }
+    .rec-title {
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .priority-tag {
+      font-size: .68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: .15rem .45rem;
+      border-radius: 3px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .priority-tag.high { background: rgba(217,95,95,.12); color: var(--neg); border: 1px solid rgba(217,95,95,.3); }
+    .priority-tag.med  { background: rgba(201,138,43,.12); color: var(--warn); border: 1px solid rgba(201,138,43,.3); }
+    .priority-tag.low  { background: rgba(58,173,119,.12); color: var(--pos); border: 1px solid rgba(58,173,119,.3); }
+    .rec-cat { font-size: .7rem; color: var(--text-3); margin-bottom: .5rem; }
+    .rec-body { font-size: .8rem; color: var(--text-2); line-height: 1.5; margin-bottom: .55rem; }
+    .rec-steps { list-style: none; display: flex; flex-direction: column; gap: .25rem; }
+    .rec-steps li {
+      font-size: .76rem;
+      color: var(--text-3);
+      padding-left: .9rem;
+      position: relative;
+      line-height: 1.4;
+    }
+    .rec-steps li::before { content: "–"; position: absolute; left: 0; color: var(--text-3); }
+    .rec-saving {
+      font-size: .74rem;
+      font-family: var(--mono);
+      color: var(--pos);
+      margin-top: .5rem;
+      padding-top: .5rem;
+      border-top: 1px solid var(--line);
+    }
+
+    /* ── ECHO TABLE ─────────────────────────────────────── */
+    .echo-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .79rem;
+    }
+    .echo-table th {
+      text-align: left;
+      font-size: .68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-3);
+      padding: .4rem .75rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-alt);
+    }
+    .echo-table td {
+      padding: .4rem .75rem;
+      border-bottom: 1px solid var(--line);
+      color: var(--text-2);
+    }
+    .echo-table td:last-child {
+      font-family: var(--mono);
+      color: var(--text);
+    }
+    .echo-table tr:last-child td { border-bottom: none; }
+
+    /* ── MISC ───────────────────────────────────────────── */
+    .hidden { display: none !important; }
+    .spinner {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid rgba(255,255,255,.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: .3rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+  </style>
+</head>
+<body>
+
+<!-- ── TOPBAR ───────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="brand" href="/">EcoSense<span>Carbon Monitoring</span></a>
+    <div class="topbar-sep"></div>
+    <div class="model-meta" id="model-meta">Regression · R² —</div>
+  </div>
+  <div class="api-status">
+    <div class="api-status-dot" id="api-dot"></div>
+    <span id="api-label">Connecting…</span>
+  </div>
+</div>
+
+<!-- ── SHELL ────────────────────────────────────────────── -->
+<div class="shell">
+
+  <!-- ── SIDEBAR ──────────────────────────────────────── -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <h2>Operational Inputs</h2>
+      <p>Enter readings from your facility. All fields are required. No values are assumed.</p>
+    </div>
+    <div class="sidebar-body">
+
+      <div class="field-group-label">Energy &amp; Grid</div>
+
+      <div class="field">
+        <label for="f-energy">Energy Consumption (kWh)</label>
+        <input id="f-energy" type="number" min="0" max="10000" step="50" placeholder="e.g. 2450" title="Electricity used by the facility during this hour, from its energy meter."/>
+      </div>
+      <div class="field">
+        <label for="f-grid">Grid Carbon Intensity (kg CO₂/kWh)</label>
+        <input id="f-grid" type="number" min="0" max="2" step="0.01" placeholder="e.g. 0.67" title="Grid CO₂ per kWh for this hour. Enter the provider factor and verify its source and region."/>
+      </div>
+
+      <div class="field-group-label">Production</div>
+
+      <div class="field">
+        <label for="f-prod">Production Output (Tons/hr)</label>
+        <input id="f-prod" type="number" min="0" max="500" step="1" placeholder="e.g. 48" title="Product output during this hour, from a counter or production log."/>
+      </div>
+
+      <div class="field-group-label">Thermal Equipment</div>
+
+      <div class="field">
+        <label for="f-furnace">Furnace Temperature (°C)</label>
+        <input id="f-furnace" type="number" min="0" max="2000" step="10" placeholder="e.g. 1050" title="Furnace temperature from the instrument reading for this hour."/>
+      </div>
+      <div class="field">
+        <label for="f-boiler">Boiler Pressure (Bar)</label>
+        <input id="f-boiler" type="number" min="0" max="100" step="0.5" placeholder="e.g. 22.5" title="Boiler pressure from the instrument reading for this hour."/>
+      </div>
+
+      <div class="field-group-label">Shift &amp; Time</div>
+
+      <div class="field">
+        <label for="f-shift">Work Shift</label>
+        <select id="f-shift" title="Scheduled shift active when these readings were recorded; must match the selected hour.">
+          <option value="">— select —</option>
+          <option value="1">Shift 1 &nbsp;(08:00 – 16:00)</option>
+          <option value="2">Shift 2 &nbsp;(16:00 – 00:00)</option>
+          <option value="3">Shift 3 &nbsp;(00:00 – 08:00)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-hour">Hour of Day (0–23)</label>
+        <input id="f-hour" type="number" min="0" max="23" step="1" placeholder="e.g. 14" title="Local clock hour of the measurement, from 0 through 23."/>
+      </div>
+      <div class="field">
+        <label for="f-day">Day of Week</label>
+        <select id="f-day" title="Calendar day of the measurement; weekend status is derived automatically.">
+          <option value="">— select —</option>
+          <option value="0">Monday</option>
+          <option value="1">Tuesday</option>
+          <option value="2">Wednesday</option>
+          <option value="3">Thursday</option>
+          <option value="4">Friday</option>
+          <option value="5">Saturday</option>
+          <option value="6">Sunday</option>
+        </select>
+      </div>
+
+      <div class="field-group-label">Previous Hour Readings</div>
+
+      <div class="field">
+        <label for="f-lag-energy">Previous Hour Energy (kWh)</label>
+        <input id="f-lag-energy" type="number" min="0" max="10000" step="50" placeholder="e.g. 2380" title="Facility energy meter reading from the preceding hour."/>
+      </div>
+      <div class="field">
+        <label for="f-lag-prod">Previous Hour Production (Tons)</label>
+        <input id="f-lag-prod" type="number" min="0" max="500" step="1" placeholder="e.g. 46" title="Production counter reading from the preceding hour."/>
+      </div>
+      <div class="field">
+        <label for="f-rolling">3-Hour Rolling Average Energy (kWh)</label>
+        <input id="f-rolling" type="number" min="0" max="10000" step="50" placeholder="e.g. 2410" title="Average energy across this hour and the previous two hourly readings."/>
+      </div>
+
+    </div>
+    <div class="sidebar-footer">
+      <button class="run-btn" id="run-btn" onclick="runAnalysis()">Run Analysis</button>
+      <p class="sidebar-note">All 11 fields must be filled before running.</p>
+    </div>
+  </div>
+
+  <!-- ── MAIN ─────────────────────────────────────────── -->
+  <main>
+    <div class="main-inner">
+
+      <div class="err-bar" id="err-bar"></div>
+
+      <!-- Empty state -->
+      <div class="empty" id="empty-state">
+        <h3>No data submitted</h3>
+        <p>Fill in the operational readings in the sidebar<br/>and click <strong>Run Analysis</strong> to begin.</p>
+      </div>
+
+      <!-- Results (shown after submit) -->
+      <div id="results" class="hidden">
+
+        <!-- Section 1: Prediction -->
+        <div class="section">
+          <div class="section-head">
+            <span class="section-title">Prediction</span>
+            <span class="section-sub">Carbon emission estimate from your inputs</span>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-cell">
+              <div class="kpi-label">Activity-Based Demo Baseline</div>
+              <div class="kpi-value" id="kpi-baseline">—</div>
+              <div class="kpi-sub">Synthetic formula · kg CO₂/hour</div>
+            </div>
+            <div class="kpi-cell">
+              <div class="kpi-label">ML Prediction</div>
+              <div class="kpi-value accent-pos" id="kpi-pred">—</div>
+              <div class="kpi-sub">kg CO₂/hour</div>
+            </div>
+            <div class="kpi-cell">
+              <div class="kpi-label">Empirical Prediction Range</div>
+              <div class="kpi-value" id="kpi-ci" style="font-size:1rem">—</div>
+              <div class="kpi-sub" id="kpi-interval-sub">Holdout-calibrated · kg CO₂/hour</div>
+            </div>
+            <div class="kpi-cell">
+              <div class="kpi-label">ML Carbon Intensity</div>
+              <div class="kpi-value" id="kpi-intensity">—</div>
+              <div class="kpi-sub">kg CO₂ per submitted production unit*</div>
+            </div>
+          </div>
+          <div class="interp" id="data-quality"></div>
+          <div class="interp" id="pred-interp"></div>
+          <details class="interp" id="trace-panel">
+            <summary>How was this ML prediction derived?</summary>
+            <div id="pred-trace"></div>
+          </details>
+        </div>
+
+        <!-- Section 2: SHAP + Simulator (two columns) -->
+        <div class="section grid-2">
+
+          <!-- SHAP -->
+          <div>
+            <div class="section-head">
+              <span class="section-title">Model Feature Contributions</span>
+              <span class="section-sub">SHAP explanation</span>
+            </div>
+            <p class="shap-caption">
+              Bars describe how the model used each feature relative to its baseline; they do not establish physical causation.
+              <span style="color:var(--neg)">Red = higher model output.</span>
+              <span style="color:var(--pos)">Green = lower model output.</span>
+            </p>
+            <div class="shap-list" id="shap-list"></div>
+            <div class="shap-footer" id="shap-footer"></div>
+            <div class="shap-driver hidden" id="shap-driver"></div>
+          </div>
+
+          <!-- Simulator -->
+          <div>
+            <div class="section-head">
+              <span class="section-title">What-If Simulation</span>
+              <span class="section-sub">Estimate impact of proposed changes</span>
+            </div>
+            <p class="shap-caption" style="margin-bottom:.65rem;">
+              Enter only the parameters you plan to change. Leave any field blank to keep its current value.
+            </p>
+            <div class="sim-fields">
+              <div class="sim-field">
+                <label for="sim-energy">Energy (kWh)</label>
+                <input id="sim-energy" type="number" min="0" step="50" placeholder="no change"/>
+              </div>
+              <div class="sim-field">
+                <label for="sim-grid">Grid Factor (kg CO₂/kWh)</label>
+                <input id="sim-grid" type="number" min="0" max="2" step="0.01" placeholder="no change"/>
+              </div>
+              <div class="sim-field">
+                <label for="sim-production">Production (tonnes/hr)</label>
+                <input id="sim-production" type="number" min="0" max="500" step="1" placeholder="no change"/>
+              </div>
+              <div class="sim-field">
+                <label for="sim-furnace">Furnace Temp (°C)</label>
+                <input id="sim-furnace" type="number" min="0" max="2000" step="10" placeholder="no change"/>
+              </div>
+              <div class="sim-field">
+                <label for="sim-boiler">Boiler Pressure (Bar)</label>
+                <input id="sim-boiler" type="number" min="0" max="100" step="0.5" placeholder="no change"/>
+              </div>
+            </div>
+            <button class="sim-btn" onclick="runSimulate()">Simulate</button>
+
+            <div id="sim-out" class="hidden">
+              <div class="sim-result-grid">
+                <div class="sim-cell">
+                  <div class="sim-cell-label">Current ML Prediction</div>
+                  <div class="sim-cell-val" id="sim-base">—</div>
+                </div>
+                <div class="sim-cell">
+                  <div class="sim-cell-label">Scenario ML Estimate</div>
+                  <div class="sim-cell-val" id="sim-result">—</div>
+                </div>
+                <div class="sim-cell">
+                  <div class="sim-cell-label">Model-Estimated Change</div>
+                  <div class="sim-cell-val" id="sim-delta">—</div>
+                </div>
+                <div class="sim-cell">
+                  <div class="sim-cell-label">ML Intensity, kg CO₂/production unit*</div>
+                  <div class="sim-cell-val" id="sim-pct">—</div>
+                </div>
+              </div>
+              <div class="sim-interp" id="sim-interp"></div>
+              <div class="breakdown-list" id="sim-accounting"></div>
+              <details class="interp" id="sim-trace-panel">
+                <summary>How was this scenario estimated?</summary>
+                <div id="sim-trace"></div>
+              </details>
+              <div class="breakdown-list" id="sim-breakdown"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Section 3: Recommendations -->
+        <div class="section">
+          <div class="section-head">
+            <span class="section-title">Optimization Recommendations</span>
+            <span class="section-sub">Derived from your submitted readings and SHAP analysis</span>
+          </div>
+          <div class="rec-list" id="rec-list"></div>
+        </div>
+
+        <!-- Section 4: Submitted parameters (echo) -->
+        <div class="section">
+          <div class="section-head">
+            <span class="section-title">Submitted Parameters</span>
+            <span class="section-sub">Exactly as you entered them — no values were modified or assumed</span>
+          </div>
+          <table class="echo-table">
+            <thead>
+              <tr><th>Parameter</th><th>Value</th></tr>
+            </thead>
+            <tbody id="echo-body"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /results -->
+    </div><!-- /main-inner -->
+  </main>
+
+</div><!-- /shell -->
+
+<script>
+  const API = 'http://127.0.0.1:8000';
+  let lastSample = null;
+
+  // ── Helpers ──────────────────────────────────────────────
+  function mono(n, dp=1) {
+    if (n == null || isNaN(n)) return '—';
+    return parseFloat(n).toFixed(dp);
+  }
+  function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+  function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+  function setText(id, t) { const el = document.getElementById(id); if (el) el.textContent = t; }
+  function setHTML(id, h) { const el = document.getElementById(id); if (el) el.innerHTML = h; }
+
+  // ── API status check ──────────────────────────────────────
+  async function checkStatus() {
+    try {
+      const d = await fetch(`${API}/api/status`).then(r => r.json());
+      const modelName = (d.model_type || 'Regression').replace(' + SHAP Explainer', '');
+      setText('model-meta', `${modelName} · R² ${(d.metrics.test_r2*100).toFixed(2)}% · RMSE ${mono(d.metrics.test_rmse,1)} kg CO₂`);
+      document.getElementById('api-dot').className = 'api-status-dot online';
+      setText('api-label', 'API connected');
+    } catch {
+      setText('api-label', 'API unreachable');
+    }
+  }
+
+  // ── Gather + validate ────────────────────────────────────
+  const FIELDS = [
+    { id:'f-energy',    label:'Energy Consumption' },
+    { id:'f-grid',      label:'Grid Carbon Intensity' },
+    { id:'f-prod',      label:'Production Output' },
+    { id:'f-furnace',   label:'Furnace Temperature' },
+    { id:'f-boiler',    label:'Boiler Pressure' },
+    { id:'f-shift',     label:'Work Shift' },
+    { id:'f-hour',      label:'Hour of Day' },
+    { id:'f-day',       label:'Day of Week' },
+    { id:'f-lag-energy',label:'Previous Hour Energy' },
+    { id:'f-lag-prod',  label:'Previous Hour Production' },
+    { id:'f-rolling',   label:'3-Hour Rolling Average Energy' },
+  ];
+
+  function gatherInputs() {
+    const missing = [], vals = {};
+    for (const f of FIELDS) {
+      const v = document.getElementById(f.id)?.value?.trim();
+      if (!v) missing.push(f.label);
+      else vals[f.id] = v;
+    }
+    return { missing, vals };
+  }
+
+  function validateInputValues(vals) {
+    const ranges = [
+      ['f-energy', 0, 10000, 'Energy Consumption'], ['f-grid', 0, 2, 'Grid Carbon Intensity'],
+      ['f-prod', 0, 500, 'Production Output'], ['f-furnace', 0, 2000, 'Furnace Temperature'],
+      ['f-boiler', 0, 100, 'Boiler Pressure'], ['f-hour', 0, 23, 'Hour of Day'],
+      ['f-lag-energy', 0, 10000, 'Previous Hour Energy'], ['f-lag-prod', 0, 500, 'Previous Hour Production'],
+      ['f-rolling', 0, 10000, '3-Hour Rolling Average Energy'],
+    ];
+    for (const [id, min, max, label] of ranges) {
+      const value = Number(vals[id]);
+      if (!Number.isFinite(value) || value < min || value > max) return `${label} must be between ${min} and ${max}.`;
+    }
+    const hour = Number(vals['f-hour']);
+    const expectedShift = hour >= 16 ? 2 : hour >= 8 ? 1 : 3;
+    if (Number(vals['f-shift']) !== expectedShift) return `Selected shift does not match hour ${hour}; expected shift ${expectedShift}.`;
+    return null;
+  }
+
+  // ── Run analysis ──────────────────────────────────────────
+  async function runAnalysis() {
+    const btn = document.getElementById('run-btn');
+    const errBar = document.getElementById('err-bar');
+    errBar.style.display = 'none';
+    btn.innerHTML = '<span class="spinner"></span> Running…';
+    btn.disabled = true;
+
+    const { missing, vals } = gatherInputs();
+    if (missing.length) {
+      errBar.textContent = `Missing required fields: ${missing.join(', ')}.`;
+      errBar.style.display = 'block';
+      hide('results'); show('empty-state');
+      btn.textContent = 'Run Analysis'; btn.disabled = false;
+      return;
+    }
+
+    const validationError = validateInputValues(vals);
+    if (validationError) {
+      errBar.textContent = `Input rejected: ${validationError}`;
+      errBar.style.display = 'block';
+      btn.textContent = 'Run Analysis'; btn.disabled = false;
+      return;
+    }
+
+    hide('empty-state');
+    const day = parseInt(vals['f-day']);
+    lastSample = {
+      energy_kwh:           parseFloat(vals['f-energy']),
+      grid_emission_factor: parseFloat(vals['f-grid']),
+      production_volume_tons: parseFloat(vals['f-prod']),
+      furnace_temp_c:       parseFloat(vals['f-furnace']),
+      boiler_pressure_bar:  parseFloat(vals['f-boiler']),
+      shift:                parseInt(vals['f-shift']),
+      hour:                 parseInt(vals['f-hour']),
+      day_of_week:          day,
+      is_weekend:           day >= 5 ? 1 : 0,
+      energy_lag1:          parseFloat(vals['f-lag-energy']),
+      production_lag1:      parseFloat(vals['f-lag-prod']),
+      rolling_avg_energy_3h: parseFloat(vals['f-rolling']),
+    };
+
+    try {
+      const responses = await Promise.all([
+        fetch(`${API}/api/predict`,  { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(lastSample) }),
+        fetch(`${API}/api/explain`,  { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(lastSample) }),
+        fetch(`${API}/api/recommend`,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(lastSample) }),
+      ]);
+      const payloads = await Promise.all(responses.map(response => response.json()));
+      const failedResponse = responses.findIndex(response => !response.ok);
+      if (failedResponse >= 0) {
+        const detail = payloads[failedResponse].detail;
+        throw new Error(typeof detail === 'string' ? detail : 'The submitted values were rejected.');
+      }
+      const [pred, expl, recs] = payloads;
+
+      renderPrediction(pred);
+      renderSHAP(expl);
+      renderRecommendations(recs.recommendations);
+      renderEcho(lastSample, vals);
+
+      // reset simulator
+      hide('sim-out');
+      ['sim-energy','sim-grid','sim-production','sim-furnace','sim-boiler'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      show('results');
+    } catch (e) {
+      errBar.textContent = e.message || `Could not reach the API at ${API}.`;
+      errBar.style.display = 'block';
+    }
+
+    btn.textContent = 'Run Analysis'; btn.disabled = false;
+  }
+
+  // ── Render prediction ─────────────────────────────────────
+  function renderPrediction(d) {
+    const trace = d.traceability;
+    const baseline = trace.activity_based_demo_baseline;
+    setText('kpi-baseline', `${mono(baseline.value,1)} kg CO₂`);
+    setText('kpi-pred', `${mono(d.predicted_emissions_kg_co2,1)} kg CO₂`);
+    setText('kpi-ci', d.lower_bound_95 == null ? 'Unavailable' : `${mono(d.lower_bound_95,0)} – ${mono(d.upper_bound_95,0)}`);
+    setText('kpi-interval-sub', d.prediction_interval.observed_holdout_coverage == null ? 'Prediction interval unavailable' : `${mono(d.prediction_interval.observed_holdout_coverage * 100,1)}% final-test coverage · not a guarantee`);
+    setText('kpi-intensity', d.carbon_intensity_kg_co2_per_production_unit == null ? 'Unavailable' : `${mono(d.carbon_intensity_kg_co2_per_production_unit,2)} kg CO₂/unit`);
+    setText('data-quality', `Required-field completeness: ${trace.input_quality.completeness_percent.toFixed(0)}%. Model support: ${trace.input_quality.training_range_status}${trace.input_quality.outside_training_range.length ? ` (${trace.input_quality.outside_training_range.join(', ')})` : ''}. Fit ranges are not process safety limits. ${trace.input_quality.limitations}`);
+    setHTML('pred-interp',
+      `<strong>ML prediction:</strong> ${mono(d.predicted_emissions_kg_co2,1)} kg CO₂/hour. ` +
+      `<strong>Activity-based demo baseline:</strong> ${mono(baseline.value,1)} kg CO₂/hour. ` +
+      `The baseline is synthetic and is not verified carbon accounting.`
+    );
+
+    const componentRows = baseline.components.map(component => `<tr><td>${component.source}</td><td>${mono(component.activity,2)} ${component.activity_unit}</td><td>${mono(component.emission_factor,3)} ${component.factor_unit}</td><td>${mono(component.emissions_kg_co2,2)} kg CO₂</td><td>${component.factor_id}</td><td>${component.factor_source}</td></tr>`).join('');
+    const inputRows = Object.entries(trace.input_values).map(([key, value]) => `<tr><td>${key}</td><td>${value}</td></tr>`).join('');
+    const featureRows = Object.entries(trace.model_features).map(([key, value]) => `<tr><td>${key}</td><td>${mono(value,3)}</td></tr>`).join('');
+    setHTML('pred-trace', `
+      <p><strong>Method:</strong> ${d.method} · ${d.unit}. The activity formula is a synthetic reference only.</p>
+      <h4>Actual inputs received</h4><table class="echo-table"><tbody>${inputRows}</tbody></table>
+      <h4>Demo baseline components</h4><table class="echo-table"><thead><tr><th>Source</th><th>Activity</th><th>Factor</th><th>Result</th><th>Factor ID</th><th>Provenance</th></tr></thead><tbody>${componentRows}</tbody></table>
+      <p>${baseline.factor_registry} · ${baseline.factor_registry_version} · ${baseline.factor_registry_status} · Region: ${baseline.geography} · Scope: ${baseline.scope}</p>
+      <p>Production unit note: ${baseline.production_unit_note}</p>
+      <h4>Derived ML features</h4><table class="echo-table"><tbody>${featureRows}</tbody></table>
+      <p><strong>Model:</strong> ${trace.model.name} · ${trace.model.version} · ${trace.model.model_feature_count} engineered features · schema ${trace.model.feature_schema_version}.</p>
+      <p><strong>Rows:</strong> fit ${trace.model.training_rows} · calibration ${trace.model.calibration_rows} · final test ${trace.model.test_rows} · source dataset ${trace.model.dataset_rows}.</p>
+      <p><strong>Validation:</strong> ${trace.model.evaluation_method} · MAE ${mono(trace.model.test_mae_kg_co2_per_hour,2)} kg CO₂/hour · RMSE ${mono(trace.model.test_rmse_kg_co2_per_hour,2)} kg CO₂/hour · R² ${mono(trace.model.test_r2,4)} · data SHA-256 ${trace.model.training_data_sha256}.</p>
+      <p><strong>Empirical interval:</strong> ${d.prediction_interval.method} · nominal ${(d.prediction_interval.nominal_coverage * 100).toFixed(0)}% · observed final-test coverage ${(d.prediction_interval.observed_holdout_coverage * 100).toFixed(1)}% · ${mono(d.prediction_interval.half_width_kg_co2_per_hour,2)} kg CO₂/hour half-width. ${d.prediction_interval.caveat}</p>
+      <p><strong>Difference from synthetic demo baseline:</strong> ${mono(d.traceability.difference_from_demo_baseline_kg_co2_per_hour,2)} kg CO₂/hour. This is not a measured or verified adjustment.</p>
+      <p>${trace.measurement_period} Generated ${trace.timestamp_utc}. ${trace.production_unit_note} ${baseline.limitations}</p>`);
+  }
+
+  // ── Render SHAP ───────────────────────────────────────────
+  function renderSHAP(d) {
+    const list = document.getElementById('shap-list');
+    list.innerHTML = '';
+    const contribs = d.feature_contributions;
+    const maxAbs = Math.max(...contribs.map(c => Math.abs(c.shap_value_kg_co2)), 0.01);
+    contribs.forEach(c => {
+      const pct = (Math.abs(c.shap_value_kg_co2) / maxAbs) * 100;
+      const cls = c.direction === 'INCREASE' ? 'neg' : 'pos';
+      const sign = c.direction === 'INCREASE' ? '+' : '';
+      list.innerHTML += `
+        <div class="shap-row">
+          <div class="shap-meta">
+            <span class="shap-name">${c.friendly_name}</span>
+            <span class="shap-num ${cls}">${sign}${mono(c.shap_value_kg_co2,1)} kg CO₂/hour model contribution (${c.impact_percentage}%)</span>
+          </div>
+          <div class="shap-bar-bg"><div class="shap-bar-fill ${cls}" style="width:${pct.toFixed(1)}%"></div></div>
+        </div>`;
+    });
+    setText('shap-footer', `Baseline φ₀: ${mono(d.baseline_emission_kg_co2,1)} kg CO₂  →  Predicted: ${mono(d.predicted_emission_kg_co2,1)} kg CO₂`);
+
+    const top = contribs[0];
+    const dir = top.direction === 'INCREASE' ? 'increases' : 'decreases';
+    const driver = document.getElementById('shap-driver');
+    driver.textContent = `Largest model feature contribution: "${top.friendly_name}" (feature value: ${top.feature_value}) ${dir} the model output by ${Math.abs(top.shap_value_kg_co2).toFixed(1)} kg CO₂/hour. SHAP does not establish physical causation.`;
+    driver.classList.remove('hidden');
+  }
+
+  // ── Run simulation ────────────────────────────────────────
+  async function runSimulate() {
+    if (!lastSample) { alert('Run the main analysis first.'); return; }
+    const mods = {};
+    const simVals = {
+      'sim-energy':  'energy_kwh',
+      'sim-grid':    'grid_emission_factor',
+      'sim-production': 'production_volume_tons',
+      'sim-furnace': 'furnace_temp_c',
+      'sim-boiler':  'boiler_pressure_bar',
+    };
+    for (const [elId, key] of Object.entries(simVals)) {
+      const v = document.getElementById(elId)?.value;
+      if (v && v.trim()) mods[key] = parseFloat(v);
+    }
+    if (!Object.keys(mods).length) {
+      alert('Enter at least one proposed change to simulate.');
+      return;
+    }
+    try {
+      const response = await fetch(`${API}/api/simulate`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ baseline_data: lastSample, modifications: mods })
+      });
+      const d = await response.json();
+      if (!response.ok) throw new Error(typeof d.detail === 'string' ? d.detail : 'Scenario rejected.');
+      const change = d.simulated_emission_kg_co2 - d.baseline_emission_kg_co2;
+      const isReduction = change < 0;
+      const isNeutral = change === 0;
+
+      setText('sim-base',   `${mono(d.baseline_emission_kg_co2,1)} kg CO₂/hour`);
+      setText('sim-result', `${mono(d.simulated_emission_kg_co2,1)} kg CO₂/hour`);
+      setText('sim-delta',  `${change > 0 ? '+' : ''}${mono(change,1)} kg CO₂/hour`);
+      setText('sim-pct', `${mono(d.baseline_intensity_kg_co2_per_production_unit,2)} → ${mono(d.scenario_intensity_kg_co2_per_production_unit,2)}`);
+      document.getElementById('sim-delta').className = `sim-cell-val ${isReduction ? 'pos' : isNeutral ? '' : 'neg'}`;
+
+      const interp = document.getElementById('sim-interp');
+      interp.className = `sim-interp${isReduction ? '' : ' neg'}`;
+      const productionChanged = d.scenario_inputs.production_volume_tons !== d.baseline_inputs.production_volume_tons;
+      const intensityChanged = d.scenario_intensity_kg_co2_per_production_unit !== d.baseline_intensity_kg_co2_per_production_unit;
+      const productionCaveat = productionChanged && intensityChanged ? ' Production changed; interpret absolute emissions alongside intensity.' : '';
+      interp.textContent = `${d.method}: ${change < 0 ? 'estimated emissions decrease' : isNeutral ? 'no estimated emissions change' : 'estimated emissions increase'} of ${mono(Math.abs(change),1)} kg CO₂/hour (${mono(Math.abs(d.percentage_reduction),2)}%). Estimated change only; verify with post-intervention measurements.${productionCaveat}`;
+
+      setText('sim-accounting', `Separate synthetic activity baseline: ${mono(d.baseline_activity_based_demo.value,1)} → ${mono(d.scenario_activity_based_demo.value,1)} kg CO₂/hour. This is not verified accounting.`);
+      const scenarioRows = Object.entries(d.baseline_inputs).map(([key, value]) => `<tr><td>${key}</td><td>${value}</td><td>${d.scenario_inputs[key]}</td></tr>`).join('');
+      setHTML('sim-trace', `<p><strong>Current input → scenario input → model re-evaluation → estimated change.</strong> All values below came from the request or the explicitly entered scenario.</p><table class="echo-table"><thead><tr><th>Input</th><th>Current</th><th>Scenario</th></tr></thead><tbody>${scenarioRows}</tbody></table><p>Current ML estimate: ${mono(d.baseline_emission_kg_co2,2)} kg CO₂/hour · Scenario ML estimate: ${mono(d.simulated_emission_kg_co2,2)} kg CO₂/hour · Estimated change: ${change > 0 ? '+' : ''}${mono(change,2)} kg CO₂/hour.</p><p>${d.limitation}</p>`);
+
+      const bd = document.getElementById('sim-breakdown');
+      bd.innerHTML = d.parameter_impacts.map(pi => {
+        const contributionChange = pi.model_contribution_change_kg_co2_per_hour;
+        return `<div><span>${pi.friendly_name} model feature:</span> <code>${pi.original_value}</code> → <code>${pi.simulated_value}</code> · scenario contribution change ${contributionChange > 0 ? '+' : ''}${mono(contributionChange,1)} kg CO₂/hour</div>`;
+      }).join('');
+
+      show('sim-out');
+    } catch(e) {
+      const interp = document.getElementById('sim-interp');
+      interp.className = 'sim-interp neg';
+      interp.textContent = e.message || 'Simulation failed. Check the API and scenario inputs.';
+      show('sim-out');
+    }
+  }
+
+  // ── Render recommendations ────────────────────────────────
+  function renderRecommendations(recs) {
+    const list = document.getElementById('rec-list');
+    if (!recs?.length) { list.innerHTML = '<p style="color:var(--text-3);font-size:.8rem;">No specific recommendations for these readings.</p>'; return; }
+    list.innerHTML = recs.map(r => {
+      const pCls = r.priority === 'HIGH' ? 'high' : r.priority === 'MEDIUM' ? 'med' : 'low';
+      const steps = r.action_steps.map(s => `<li>${s}</li>`).join('');
+      return `
+        <div class="rec-item">
+          <div class="rec-item-head">
+            <div class="rec-title">${r.title}</div>
+            <span class="priority-tag ${pCls}">${r.priority}</span>
+          </div>
+          <div class="rec-cat">${r.category} · Effort: ${r.implementation_effort}</div>
+          <div class="rec-body">${r.trigger}<br/>${r.reason}<br/>${r.impact_summary}</div>
+          <ul class="rec-steps">${steps}</ul>
+          <div class="rec-saving">Estimated effect: ${r.potential_saving_kg_co2_day == null ? 'Not quantified' : `${mono(r.potential_saving_kg_co2_day,0)} kg CO₂/day`} · Cost: ${r.cost_impact} · Production: ${r.production_impact} · Confidence: unavailable</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Render echo table ─────────────────────────────────────
+  function renderEcho(sample, vals) {
+    const shifts = {1:'Shift 1 (08:00–16:00)', 2:'Shift 2 (16:00–00:00)', 3:'Shift 3 (00:00–08:00)'};
+    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const rows = [
+      ['Energy Consumption', `${sample.energy_kwh} kWh`],
+      ['Grid Carbon Intensity', `${sample.grid_emission_factor} kg CO₂/kWh`],
+      ['Production Output', `${sample.production_volume_tons} tons/hr`],
+      ['Furnace Temperature', `${sample.furnace_temp_c} °C`],
+      ['Boiler Pressure', `${sample.boiler_pressure_bar} Bar`],
+      ['Work Shift', shifts[sample.shift]],
+      ['Hour of Day', `${sample.hour}:00`],
+      ['Day of Week', days[sample.day_of_week]],
+      ['Weekend', sample.is_weekend ? 'Yes' : 'No'],
+      ['Previous Hour Energy', `${sample.energy_lag1} kWh`],
+      ['Previous Hour Production', `${sample.production_lag1} tons`],
+      ['3-Hour Rolling Avg Energy', `${sample.rolling_avg_energy_3h} kWh`],
+    ];
+    document.getElementById('echo-body').innerHTML =
+      rows.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  }
+
+  // ── Boot ──────────────────────────────────────────────────
+  checkStatus();
+</script>
+</body>
+</html>
